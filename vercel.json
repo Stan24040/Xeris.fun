@@ -1,12 +1,13 @@
 {
   "version": 2,
   "name": "xeris-fun",
-  "buildCommand": null,
   "outputDirectory": "public",
-  "framework": null,
-  "routes": [
-    { "src": "/api/proxy", "dest": "/api/proxy.js" },
-    { "src": "/(.*)", "dest": "/public/$1" }
+  "functions": {
+    "api/proxy.js": { "memory": 128, "maxDuration": 15 }
+  },
+  "rewrites": [
+    { "source": "/api/proxy", "destination": "/api/proxy.js" },
+    { "source": "/(.*)", "destination": "/public/$1" }
   ],
   "headers": [
     {
