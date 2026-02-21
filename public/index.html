@@ -2,13 +2,26 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <!-- xeris.fun v6.2 — robust wallet connection + transaction signing 20260221 -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SOLPRIZE — Xeris Lottery</title>
-  <meta name="description" content="The provably fair lottery on the Xeris blockchain. Buy tickets with XRS, win big." />
-  <meta property="og:title" content="SOLPRIZE — Xeris Lottery" />
-  <meta property="og:description" content="Buy tickets. Win XRS. On-chain lottery powered by Xeris." />
-  <meta name="theme-color" content="#0a0a0f" />
+  <title>XERIS.FUN — On-Chain Lottery</title>
+  <meta name="description" content="Buy XRS tickets. One random winner takes 95% of the prize pool every draw. Provably fair on-chain lottery on Xeris blockchain." />
+  <meta name="theme-color" content="#07070d" />
+  <meta property="og:type"        content="website" />
+  <meta property="og:url"         content="https://xeris.fun/" />
+  <meta property="og:title"       content="XERIS.FUN — On-Chain Lottery" />
+  <meta property="og:description" content="Buy XRS tickets. One random winner takes 95% of the prize pool every draw." />
+  <meta property="og:image"       content="https://xeris.fun/og-image.png" />
+  <meta name="twitter:card"        content="summary_large_image" />
+  <meta name="twitter:title"       content="XERIS.FUN — On-Chain Lottery" />
+  <meta name="twitter:description" content="Buy XRS tickets. Win big. Provably fair on-chain lottery." />
+  <meta name="twitter:image"       content="https://xeris.fun/og-image.png" />
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+  <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="manifest" href="/manifest.json" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
 
   <style>
@@ -347,19 +360,88 @@
     #buyBtn:active { transform: translateY(0); }
     #buyBtn:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; transform: none; box-shadow: none; }
 
-    .faucet-link {
-      display: block;
-      margin-top: 12px;
-      text-align: center;
+    /* ── FAUCET BUTTON ── */
+    .faucet-section {
+      margin-top: 16px;
+      border: 1px solid var(--border);
+      background: rgba(0,229,255,.03);
+      padding: 16px;
+    }
+    .faucet-section-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      letter-spacing: .15em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    #faucetBtn {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 13px 16px;
+      background: linear-gradient(135deg, rgba(0,229,255,.15), rgba(0,229,255,.06));
+      border: 1px solid rgba(0,229,255,.35);
+      color: var(--accent3);
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 18px;
+      letter-spacing: .12em;
+      cursor: pointer;
+      transition: background .2s, border-color .2s, transform .1s, box-shadow .2s;
+      position: relative;
+      overflow: hidden;
+    }
+    #faucetBtn:hover:not(:disabled) {
+      background: linear-gradient(135deg, rgba(0,229,255,.25), rgba(0,229,255,.12));
+      border-color: rgba(0,229,255,.7);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 24px rgba(0,229,255,.2);
+    }
+    #faucetBtn:active:not(:disabled) { transform: translateY(0); }
+    #faucetBtn:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+    .faucet-icon {
+      font-size: 20px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .faucet-btn-text { line-height: 1; }
+    .faucet-amount-badge {
       font-family: 'Space Mono', monospace;
       font-size: 10px;
+      background: rgba(0,229,255,.18);
+      border: 1px solid rgba(0,229,255,.3);
       color: var(--accent3);
-      text-decoration: none;
-      letter-spacing: .08em;
-      opacity: .7;
-      transition: opacity .2s;
+      padding: 2px 8px;
+      border-radius: 20px;
+      letter-spacing: .06em;
+      flex-shrink: 0;
     }
-    .faucet-link:hover { opacity: 1; }
+    .faucet-cooldown {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
+      text-align: center;
+      margin-top: 8px;
+      letter-spacing: .06em;
+      min-height: 16px;
+    }
+    /* Shimmer on faucet button */
+    #faucetBtn::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(120deg, transparent 30%, rgba(0,229,255,.12) 50%, transparent 70%);
+      transform: translateX(-100%);
+      transition: transform .7s;
+    }
+    #faucetBtn:hover:not(:disabled)::after { transform: translateX(100%); }
 
     /* ── POOL PANEL ── */
     .pool-visual {
@@ -465,8 +547,10 @@
       border-bottom: 1px solid rgba(30,30,53,.5);
       font-size: 13px;
       vertical-align: middle;
+      align-self: center;
     }
     .player-row > span:not(:first-child) { text-align: right; }
+    .player-row > span:first-child { display: flex; align-items: center; }
     .player-addr {
       font-family: 'Space Mono', monospace;
       font-size: 12px;
@@ -635,6 +719,7 @@
     .toast.success { border-color: var(--accent); color: var(--accent); }
     .toast.error   { border-color: var(--accent2); color: var(--accent2); }
     .toast.info    { border-color: var(--accent3); color: var(--accent3); }
+    .toast a { pointer-events: all; cursor: pointer; }
     @keyframes slideIn {
       from { transform: translateX(30px); opacity: 0; }
       to   { transform: translateX(0); opacity: 1; }
@@ -668,10 +753,15 @@
       font-size: 11px;
       color: var(--muted);
       text-align: center;
-      padding: 8px;
+      padding: 0;
       letter-spacing: .06em;
-      border-top: 1px solid var(--border);
       margin-top: 8px;
+      min-height: 0;
+      transition: all .2s;
+    }
+    #statusBar:not(:empty) {
+      padding: 8px;
+      border-top: 1px solid var(--border);
     }
 
     /* ── FOOTER ── */
@@ -702,18 +792,114 @@
       to   { opacity: 1; transform: translateY(0); }
     }
 
-    /* ── RESPONSIVE ── */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+    }
+
     @media (max-width: 768px) {
       header { padding: 0 16px; }
       .hero h1 { font-size: clamp(56px, 18vw, 80px); }
       .stats-row { grid-template-columns: 1fr 1fr; }
       .two-col { grid-template-columns: 1fr; }
       main { padding: 40px 16px 80px; }
+      footer { flex-direction: column; gap: 8px; text-align: center; }
+      .u-addr { display: none; }
     }
 
-    @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after { animation: none !important; transition: none !important; }
+    /* ── USERNAME MODAL ── */
+    .username-modal-inner { text-align: center; }
+    .username-avatar {
+      width: 64px; height: 64px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent3));
+      margin: 0 auto 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
     }
+    .username-input-wrap {
+      position: relative;
+      margin-bottom: 8px;
+    }
+    .username-prefix {
+      position: absolute;
+      left: 14px; top: 50%;
+      transform: translateY(-50%);
+      font-family: 'Space Mono', monospace;
+      font-size: 14px;
+      color: var(--accent);
+      pointer-events: none;
+      line-height: 1;
+    }
+    #usernameInput {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: 'Space Mono', monospace;
+      font-size: 15px;
+      padding: 14px 14px 14px 30px;
+      outline: none;
+      letter-spacing: .04em;
+      transition: border-color .2s;
+    }
+    #usernameInput:focus { border-color: var(--accent); }
+    #usernameInput.taken { border-color: var(--accent2); }
+    #usernameInput.available { border-color: var(--accent); }
+    #usernameError {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      min-height: 18px;
+      margin-bottom: 14px;
+      letter-spacing: .04em;
+    }
+    #usernameError.err  { color: var(--accent2); }
+    #usernameError.ok   { color: var(--accent); }
+    #usernameError.hint { color: var(--muted); }
+    #usernameConfirmBtn {
+      width: 100%;
+      padding: 14px;
+      background: var(--accent);
+      color: #07070d;
+      border: none;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px;
+      letter-spacing: .15em;
+      cursor: pointer;
+      transition: background .2s, transform .1s;
+      margin-bottom: 10px;
+    }
+    #usernameConfirmBtn:hover { background: #d9ff26; transform: translateY(-1px); }
+    #usernameConfirmBtn:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; transform: none; }
+    #usernameSkipBtn {
+      width: 100%;
+      padding: 10px;
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      cursor: pointer;
+      letter-spacing: .08em;
+      transition: color .2s, border-color .2s;
+    }
+    #usernameSkipBtn:hover { color: var(--text); border-color: var(--muted); }
+
+    /* Username badge in players/winners */
+    .u-name {
+      font-family: 'Space Mono', monospace;
+      font-weight: 700;
+      color: var(--text);
+      font-size: 12px;
+    }
+    .u-addr {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 1px;
+    }
+    .u-me .u-name { color: var(--accent); }
 
     /* ── SKIP LINK ── */
     .skip-link {
@@ -737,24 +923,24 @@
 <!-- TICKER -->
 <div class="ticker-wrap" role="marquee" aria-label="Network ticker">
   <div class="ticker-inner" id="tickerInner">
-    <span>◈ XERIS TESTNET LIVE</span>
-    <span>⬡ ROUND #1 NOW OPEN</span>
-    <span>✦ GET FREE XRS FROM FAUCET</span>
-    <span>◈ TICKET PRICE: 0.01 XRS</span>
+    <span>◈ TICKET PRICE: 10 XRS</span>
     <span>⬡ POWERED BY XERIS CHAIN</span>
     <span>✦ TRIPLE CONSENSUS: PoW + PoS + PoH</span>
-    <span>◈ XERIS TESTNET LIVE</span>
+    <span>◈ XERIS.FUN TESTNET LIVE</span>
     <span>⬡ ROUND #1 NOW OPEN</span>
     <span>✦ GET FREE XRS FROM FAUCET</span>
-    <span>◈ TICKET PRICE: 0.01 XRS</span>
+    <span>◈ TICKET PRICE: 10 XRS</span>
     <span>⬡ POWERED BY XERIS CHAIN</span>
     <span>✦ TRIPLE CONSENSUS: PoW + PoS + PoH</span>
+    <span>◈ XERIS.FUN TESTNET LIVE</span>
+    <span>⬡ ROUND #1 NOW OPEN</span>
+    <span>✦ GET FREE XRS FROM FAUCET</span>
   </div>
 </div>
 
 <!-- HEADER -->
 <header role="banner">
-  <a href="#" class="logo" aria-label="Solprize home">SOL<span>PRIZE</span></a>
+  <a href="#" class="logo" aria-label="Xeris.fun home">XERIS<span>.FUN</span></a>
   <div class="header-right">
     <span class="net-pill" id="netPill">⬡ XERIS TESTNET</span>
     <button id="connectBtn" aria-haspopup="dialog">CONNECT WALLET</button>
@@ -769,8 +955,8 @@
     <p class="hero-label">⬡ On-Chain Lottery · Xeris Blockchain · Testnet</p>
     <h1>WIN<br>BIG<br>XRS</h1>
     <p class="hero-sub">
-      Buy tickets with <strong>XRS</strong>. One winner takes the entire prize pool every draw.
-      Transparent. On-chain. No house games.
+      Buy tickets with <strong>XRS</strong>. One random winner takes <strong>95%</strong> of the prize pool every draw.
+      <strong>5%</strong> goes to treasury for marketing &amp; development.
     </p>
   </section>
 
@@ -804,7 +990,7 @@
         BUY TICKETS
       </div>
       <div class="ticket-price-row">
-        <span class="price-big">0.01</span>
+        <span class="price-big">10</span>
         <span class="price-unit">XRS / ticket</span>
       </div>
       <div class="qty-row" role="group" aria-label="Ticket quantity">
@@ -814,14 +1000,23 @@
       </div>
       <div class="total-row">
         <span class="total-label">Total Cost</span>
-        <span class="total-amount" id="totalCost">0.01 XRS</span>
+        <span class="total-amount" id="totalCost">10.00 XRS</span>
       </div>
       <button id="buyBtn" disabled aria-label="Buy tickets">
         CONNECT WALLET FIRST
       </button>
-      <a href="#" id="faucetLink" class="faucet-link" aria-label="Get free testnet XRS from faucet">
-        ↗ Need XRS? Get from testnet faucet
-      </a>
+
+      <!-- FAUCET BUTTON -->
+      <div class="faucet-section">
+        <div class="faucet-section-label">🚰 Testnet Faucet — Get free XRS</div>
+        <button id="faucetBtn" disabled aria-label="Request free testnet XRS">
+          <span class="faucet-icon">🚰</span>
+          <span class="faucet-btn-text">GET FREE XRS</span>
+          <span class="faucet-amount-badge" id="faucetAmountBadge">50 XRS</span>
+        </button>
+        <div class="faucet-cooldown" id="faucetCooldown">Connect wallet to use faucet</div>
+      </div>
+
       <div id="statusBar" role="status" aria-live="polite"></div>
     </div>
 
@@ -836,6 +1031,21 @@
       </div>
       <div class="pool-amount" id="poolAmount">0.00</div>
       <div class="pool-unit">XRS · CURRENT ROUND</div>
+
+      <!-- Split breakdown -->
+      <div style="display:flex;gap:0;margin:16px 0;border:1px solid var(--border);overflow:hidden;">
+        <div style="flex:1;padding:12px 10px;background:rgba(255,216,77,.05);text-align:center;border-right:1px solid var(--border);">
+          <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-bottom:4px;">🏆 Winner</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--gold);" id="splitWinner">0.00</div>
+          <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);">95% XRS</div>
+        </div>
+        <div style="flex:1;padding:12px 10px;background:rgba(0,229,255,.03);text-align:center;">
+          <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-bottom:4px;">⬡ Treasury</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--accent3);" id="splitTreasury">0.00</div>
+          <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);">5% XRS</div>
+        </div>
+      </div>
+
       <div class="countdown-label">NEXT DRAW IN</div>
       <div class="countdown" aria-label="Countdown to next draw">
         <div class="cd-unit">
@@ -881,7 +1091,7 @@
 </main>
 
 <footer role="contentinfo">
-  <p>SOLPRIZE · POWERED BY <a href="https://xerisweb.com" target="_blank" rel="noopener">XERIS CHAIN</a></p>
+  <p>XERIS.FUN · POWERED BY <a href="https://xerisweb.com" target="_blank" rel="noopener">XERIS CHAIN</a></p>
   <p>TESTNET DEMO · NOT REAL FUNDS · <a href="https://github.com/ZZachWWins/xeriscoin" target="_blank" rel="noopener">GITHUB</a></p>
 </footer>
 
@@ -890,22 +1100,79 @@
   <div class="modal">
     <button class="modal-close" id="connectModalClose" aria-label="Close">✕</button>
     <div class="modal-title" id="connectModalTitle">CONNECT WALLET</div>
-    <p class="modal-sub">Connect your wallet to buy tickets and participate in the Xeris lottery.</p>
+    <p class="modal-sub" id="connectModalSub">Connecting to Xeris wallet…</p>
 
-    <button class="wallet-option" id="wcBtn" aria-label="Connect with WalletConnect">
-      <div class="wallet-icon">🔗</div>
+    <!-- Auto-detected: shown when running inside Xeris inbuilt browser -->
+    <button class="wallet-option" id="xerisInjectedBtn" style="display:none" aria-label="Connect Xeris Wallet">
+      <div class="wallet-icon">
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+          <circle cx="14" cy="14" r="13" stroke="#c8ff00" stroke-width="1.5"/>
+          <polygon points="14,5 22,19 6,19" fill="none" stroke="#c8ff00" stroke-width="1.5" stroke-linejoin="round"/>
+          <circle cx="14" cy="14" r="2.5" fill="#c8ff00"/>
+        </svg>
+      </div>
       <div>
-        <div class="wallet-name">WALLETCONNECT</div>
-        <div class="wallet-desc">200+ wallets via QR code or deep link</div>
+        <div class="wallet-name">XERIS WALLET <span style="font-size:9px;background:var(--accent);color:#07070d;padding:2px 6px;margin-left:6px;vertical-align:middle;">DETECTED</span></div>
+        <div class="wallet-desc">Tap to connect your Xeris wallet</div>
       </div>
     </button>
 
-    <button class="wallet-option" id="demoBtn" aria-label="Use demo wallet">
+    <!-- Paste address: always available -->
+    <button class="wallet-option" id="pasteAddrBtn" aria-label="Enter wallet address">
+      <div class="wallet-icon">📋</div>
+      <div>
+        <div class="wallet-name">PASTE ADDRESS</div>
+        <div class="wallet-desc">Copy your XRS address from the Xeris wallet and paste it here</div>
+      </div>
+    </button>
+
+    <!-- WalletConnect -->
+    <button class="wallet-option" id="wcBtn" aria-label="WalletConnect">
+      <div class="wallet-icon">🔗</div>
+      <div>
+        <div class="wallet-name">WALLETCONNECT</div>
+        <div class="wallet-desc">Scan QR with any WalletConnect wallet</div>
+      </div>
+    </button>
+
+    <!-- Demo -->
+    <button class="wallet-option" id="demoBtn" aria-label="Demo wallet" style="opacity:.55">
       <div class="wallet-icon">🧪</div>
       <div>
         <div class="wallet-name">DEMO WALLET</div>
-        <div class="wallet-desc">Generate a testnet keypair instantly</div>
+        <div class="wallet-desc">Random testnet address — for testing only</div>
       </div>
+    </button>
+
+    <p style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-top:16px;text-align:center;letter-spacing:.06em;">
+      NO WALLET YET? <a href="https://xerisweb.com" target="_blank" rel="noopener" style="color:var(--accent3)">GET XERIS WALLET →</a>
+    </p>
+  </div>
+</div>
+
+<!-- PASTE ADDRESS MODAL -->
+<div class="modal-overlay" id="pasteModal" role="dialog" aria-modal="true" aria-labelledby="pasteModalTitle">
+  <div class="modal">
+    <button class="modal-close" id="pasteModalClose" aria-label="Close">✕</button>
+    <div class="modal-title" id="pasteModalTitle">PASTE YOUR ADDRESS</div>
+    <p class="modal-sub">
+      Open the <strong>Xeris wallet</strong>, tap your address to copy it, then paste below.<br/>
+      <span style="color:var(--accent);font-size:12px;">Your private keys never leave your wallet.</span>
+    </p>
+    <input
+      type="text"
+      id="pasteAddrInput"
+      placeholder="Your XRS address…"
+      autocomplete="off"
+      spellcheck="false"
+      style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Space Mono',monospace;font-size:12px;padding:14px;outline:none;letter-spacing:.04em;margin-bottom:10px;transition:border-color .2s;"
+    />
+    <div id="pasteAddrError" style="font-family:'Space Mono',monospace;font-size:11px;color:var(--accent2);margin-bottom:12px;min-height:16px;"></div>
+    <button id="pasteAddrConfirm" style="width:100%;padding:14px;background:var(--accent);color:#07070d;border:none;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.12em;cursor:pointer;transition:background .2s;">
+      CONNECT
+    </button>
+    <button id="pasteAddrBack" style="width:100%;margin-top:10px;padding:10px;background:transparent;color:var(--muted);border:1px solid var(--border);font-family:'Space Mono',monospace;font-size:11px;cursor:pointer;letter-spacing:.08em;">
+      ← BACK
     </button>
   </div>
 </div>
@@ -918,11 +1185,39 @@
     <div class="modal-title" id="winModalTitle">YOU WON!</div>
     <p class="modal-sub">Congratulations — you've won this round's prize pool.</p>
     <div class="win-amount" id="winAmount">0.00 XRS</div>
+    <p id="winTreasuryNote" style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-top:10px;letter-spacing:.05em;"></p>
   </div>
 </div>
 
 <!-- TOAST CONTAINER -->
 <div id="toastContainer" role="status" aria-live="polite" aria-atomic="true"></div>
+
+<!-- USERNAME MODAL -->
+<div class="modal-overlay" id="usernameModal" role="dialog" aria-modal="true" aria-labelledby="usernameModalTitle">
+  <div class="modal username-modal-inner">
+    <div class="username-avatar" id="usernameAvatar">🎮</div>
+    <div class="modal-title" id="usernameModalTitle">CHOOSE YOUR NAME</div>
+    <p class="modal-sub" style="margin-bottom:20px;">
+      Pick a player name that shows up in the leaderboard and winner history.<br/>
+      <span style="color:var(--muted);font-size:12px;">Saved to your wallet address permanently.</span>
+    </p>
+    <div class="username-input-wrap">
+      <span class="username-prefix">@</span>
+      <input
+        type="text"
+        id="usernameInput"
+        placeholder="coolplayer"
+        maxlength="20"
+        autocomplete="off"
+        spellcheck="false"
+        autocapitalize="none"
+      />
+    </div>
+    <div id="usernameError" class="hint">3–20 chars · letters, numbers, underscores only</div>
+    <button id="usernameConfirmBtn" disabled>SET USERNAME</button>
+    <button id="usernameSkipBtn">SKIP — USE WALLET ADDRESS</button>
+  </div>
+</div>
 
 
 <!-- ─────────────────── SCRIPTS ─────────────────── -->
@@ -931,32 +1226,57 @@
 // ══════════════════════════════════════════════
 //  CONFIG — edit these for your deployment
 // ══════════════════════════════════════════════
+// ── Runtime environment: on Vercel (HTTPS) API calls go through /api/proxy
+// ── to avoid mixed-content blocking. On localhost HTTP calls go direct.
+const IS_PROD = location.protocol === 'https:';
+const PROXY   = IS_PROD ? '/api/proxy' : null;   // Vercel serverless proxy
+
 const CONFIG = Object.freeze({
-  TREASURY:       '6G4GroMrVsGjd3xhywxfzXDg7vPn1V2Mky4B3qsXVGHo', // Confirmed treasury
-  TICKET_PRICE:   0.01,                              // XRS per ticket
-  MAX_TICKETS:    100,                               // max per purchase
-  DRAW_INTERVAL:  5 * 60,                            // 5 minutes on testnet — fast & playable
-  RPC_URL:        'http://138.197.116.81:50008/rpc',
-  API_URL:        'http://138.197.116.81:50008',
-  NET_URL:        'http://138.197.116.81:56001',
+  TREASURY:       '6G4GroMrVsGjd3xhywxfzXDg7vPn1V2Mky4B3qsXVGHo',
+  TICKET_PRICE:   10,
+  MAX_TICKETS:    100,
+  WINNER_SHARE:   0.95,
+  TREASURY_SHARE: 0.05,
+  DRAW_INTERVAL:  5 * 60,                          // 5 min draws on testnet
+  NODE_IP:        '138.197.116.81',
+  RPC_PORT:       50008,
+  NET_PORT:       56001,
+  // Resolved at runtime — HTTPS goes via /api/proxy, HTTP goes direct
+  // RPC_URL used by xerisRPC() and WalletConnect chain config
+  get RPC_URL()  { return IS_PROD ? `${PROXY}?target=rpc` : `http://138.197.116.81:50008/rpc`; },
   NETWORK:        'xeris-testnet',
   CURRENCY:       'XRS',
   WC_PROJECT_ID:  'YOUR_WALLETCONNECT_PROJECT_ID',  // from cloud.walletconnect.com
-  LAMPORTS:       1_000_000_000,                    // XRS uses 9 decimals (1 XRS = 1e9 lamports)
-  FAUCET_AMOUNT:  10,                               // XRS per faucet request
+  LAMPORTS:       1_000_000_000,
+  FAUCET_AMOUNT:  50,
+  // Explorer links: <a href> navigation is NOT blocked by mixed-content rules
+  // (only fetch() is blocked). So we link directly to the node's HTTP address.
+  // The user's browser can open http:// links from an https:// page via <a target="_blank">.
+  EXPLORER_NODE:  'http://138.197.116.81:50008',
+  // Returns a clickable explorer URL for a real tx signature, or null for fake sigs
+  txLink(sig) {
+    if (!sig || sig.startsWith('testnet-') || sig.startsWith('demo-')) return null;
+    return `${this.EXPLORER_NODE}/v2/tx/${encodeURIComponent(sig)}`;
+  },
+  // Returns an explorer link for a wallet address
+  addrLink(addr) {
+    if (!addr) return null;
+    return `${this.EXPLORER_NODE}/v2/account/${encodeURIComponent(addr)}`;
+  },
 });
 
 // ══════════════════════════════════════════════
 //  STATE
 // ══════════════════════════════════════════════
 const state = {
-  wallet: null,           // { address, publicKey }
+  wallet: null,           // { address, method }
   balance: 0,
   isBuying: false,        // mutex
   players: [],            // [{ address, tickets }]
-  winners: [],            // [{ address, amount, round }]
+  winners: [],            // [{ address, amount, round, username }]
   round: 1,
   drawTarget: Date.now() + CONFIG.DRAW_INTERVAL * 1000,
+  usernames: {},          // { [address]: username } — persisted in localStorage
 };
 
 // ══════════════════════════════════════════════
@@ -980,10 +1300,6 @@ function shortAddr(addr) {
   return addr.slice(0,6) + '…' + addr.slice(-4);
 }
 
-function fmtXRS(lamports) {
-  return (lamports / CONFIG.LAMPORTS).toFixed(4);
-}
-
 function toast(msg, type = 'info', duration = 4000) {
   const el = document.createElement('div');
   el.className = `toast ${type}`;
@@ -993,8 +1309,55 @@ function toast(msg, type = 'info', duration = 4000) {
   setTimeout(() => el.remove(), duration);
 }
 
+// Rich toast with a clickable "View on Explorer ↗" link for real tx hashes
+function toastTx(msg, sig, explorerUrl, type = 'success', duration = 9000) {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.setAttribute('role','status');
+  el.style.cssText = 'display:flex;flex-direction:column;gap:4px;';
+  const shortSig = sig ? (sig.length > 16 ? sig.slice(0,8)+'…'+sig.slice(-6) : sig) : '';
+  // Build DOM nodes instead of innerHTML to avoid any XSS risk from server-returned sig
+  const msgSpan = document.createElement('span');
+  msgSpan.textContent = msg;
+  el.appendChild(msgSpan);
+  if (shortSig) {
+    const sigSpan = document.createElement('span');
+    sigSpan.style.cssText = 'font-size:11px;opacity:.75;font-family:monospace';
+    sigSpan.textContent = `Tx: ${shortSig}`;
+    el.appendChild(sigSpan);
+  }
+  if (explorerUrl) {
+    const link = document.createElement('a');
+    link.href = explorerUrl;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.style.cssText = 'color:var(--accent);font-size:11px;font-weight:700;text-decoration:underline;margin-top:2px;';
+    link.textContent = 'View on Explorer ↗';
+    link.addEventListener('click', e => e.stopPropagation());
+    el.appendChild(link);
+  }
+  document.getElementById('toastContainer').appendChild(el);
+  setTimeout(() => el.remove(), duration);
+}
+
 function setStatus(msg) {
-  document.getElementById('statusBar').textContent = msg;
+  const el = document.getElementById('statusBar');
+  el.textContent = msg;
+}
+// For status messages that include a safe HTML link (explorer ↗)
+function setStatusWithLink(text, linkText, linkUrl) {
+  const el = document.getElementById('statusBar');
+  el.textContent = text;
+  if (linkText && linkUrl) {
+    el.appendChild(document.createTextNode(' '));
+    const a = document.createElement('a');
+    a.href = linkUrl;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.style.cssText = 'color:var(--accent);font-weight:700;text-decoration:underline;';
+    a.textContent = linkText;
+    el.appendChild(a);
+  }
 }
 
 // ══════════════════════════════════════════════
@@ -1002,14 +1365,17 @@ function setStatus(msg) {
 // ══════════════════════════════════════════════
 async function xerisRPC(method, params = []) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 8000);
+  const timer = setTimeout(() => controller.abort(), 10000);
   try {
-    const res = await fetch(CONFIG.RPC_URL, {
-      method: 'POST',
+    const url  = CONFIG.RPC_URL;
+    const body = JSON.stringify({ jsonrpc:'2.0', id:1, method, params });
+    const res  = await fetch(url, {
+      method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      signal: controller.signal,
-      body: JSON.stringify({ jsonrpc:'2.0', id:1, method, params }),
+      signal:  controller.signal,
+      body,
     });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     if (data.error) throw new Error(data.error.message || 'RPC error');
     return data.result;
@@ -1022,19 +1388,62 @@ async function xerisGET(path) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
   try {
-    const res = await fetch(CONFIG.API_URL + path, { signal: controller.signal });
+    // On production route through proxy to avoid mixed-content (HTTPS→HTTP)
+    const url = IS_PROD
+      ? `${PROXY}?target=api&path=${encodeURIComponent(path)}`
+      : `http://${CONFIG.NODE_IP}:${CONFIG.RPC_PORT}${path}`;
+    const res = await fetch(url, { signal: controller.signal });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json();
   } finally {
     clearTimeout(timer);
   }
 }
 
-// Balance: Xeris returns lamports (integer). Also try /wallet/:address REST fallback.
+// Submit a signed transaction to the network (port 56001 /submit endpoint)
+async function xerisSubmit(txBase64) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 12000);
+  try {
+    // Use literal %2F (pre-encoded) so proxy doesn't double-decode
+    const url = IS_PROD
+      ? `/api/proxy?target=net&path=%2Fsubmit`
+      : `http://${CONFIG.NODE_IP}:${CONFIG.NET_PORT}/submit`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal,
+      body: JSON.stringify({ tx_base64: txBase64 }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    // Node may return JSON or a plain-text signature string
+    const text = await res.text();
+    try { return JSON.parse(text); } catch { return { signature: text.trim() }; }
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+
+// Primary: GET /v2/account/:address  (per developer guide)
+// Fallback 1: JSON-RPC getBalance
+// Fallback 2: GET /wallet/:address
 async function fetchBalance(address) {
-  // Try JSON-RPC first
+  // Primary: REST v2 account endpoint
+  try {
+    const data = await xerisGET(`/v2/account/${address}`);
+    if (data?.balance !== undefined) {
+      const b = data.balance;
+      if (typeof b === 'number') return b < 1000 ? Math.round(b * CONFIG.LAMPORTS) : b;
+      if (typeof b === 'string') {
+        const f = parseFloat(b);
+        return f < 1000 ? Math.round(f * CONFIG.LAMPORTS) : Math.round(f);
+      }
+    }
+  } catch {}
+  // Fallback 1: JSON-RPC getBalance
   try {
     const result = await xerisRPC('getBalance', [address]);
-    // result can be: number (lamports), { value: number }, or { value: { amount: string } }
     if (typeof result === 'number') return result;
     if (result?.value !== undefined) {
       const v = result.value;
@@ -1042,16 +1451,12 @@ async function fetchBalance(address) {
       if (typeof v?.amount === 'string') return parseInt(v.amount, 10);
     }
   } catch {}
-  // REST fallback: GET /wallet/:address
+  // Fallback 2: legacy /wallet/:address
   try {
     const data = await xerisGET(`/wallet/${address}`);
-    // may return { balance: 1234 } or { balance: "1.234" }
     if (data?.balance !== undefined) {
       const b = data.balance;
-      if (typeof b === 'number') {
-        // If it looks like XRS (small float) convert to lamports
-        return b < 1000 ? Math.round(b * CONFIG.LAMPORTS) : b;
-      }
+      if (typeof b === 'number') return b < 1000 ? Math.round(b * CONFIG.LAMPORTS) : b;
       if (typeof b === 'string') {
         const f = parseFloat(b);
         return f < 1000 ? Math.round(f * CONFIG.LAMPORTS) : Math.round(f);
@@ -1065,6 +1470,20 @@ async function fetchNetworkStats() {
   try {
     return await xerisGET('/v2/stats');
   } catch { return null; }
+}
+
+// Extract block height from stats response — field name varies by node version
+function parseBlockHeight(stats) {
+  return stats?.blockHeight ?? stats?.block_height ?? stats?.blocks ?? stats?.slot ?? null;
+}
+function parseTps(stats) {
+  return stats?.tps ?? stats?.currentTps ?? stats?.current_tps ?? null;
+}
+function parseValidators(stats) {
+  return stats?.validators ?? stats?.validatorCount ?? stats?.validator_count ?? null;
+}
+function parseTxCount(stats) {
+  return stats?.totalTransactions ?? stats?.transactions ?? stats?.tx_count ?? null;
 }
 
 async function getLatestBlockhash() {
@@ -1088,73 +1507,426 @@ async function checkHealth() {
 // ══════════════════════════════════════════════
 //  FAUCET
 // ══════════════════════════════════════════════
-async function requestFaucet(address) {
-  const amount = CONFIG.FAUCET_AMOUNT;
-  const faucetBtn = document.getElementById('faucetLink');
-  if (faucetBtn) { faucetBtn.style.pointerEvents = 'none'; faucetBtn.textContent = '↻ Requesting faucet…'; }
-  setStatus(`Requesting ${amount} XRS from faucet…`);
-  try {
-    const res = await fetch(`${CONFIG.NET_URL}/airdrop/${encodeURIComponent(address)}/${amount}`, {
-      method: 'GET',
-    });
-    let data = {};
-    try { data = await res.json(); } catch {}
+const FAUCET_COOLDOWN_MS = 30 * 1000; // 30 second cooldown between requests
+let faucetCooldownTimer = null;
 
-    const sig = data.signature || data.txid || data.id || data.tx;
-    if (sig) {
-      toast(`✓ Faucet sent ${amount} XRS! Tx: ${shortAddr(sig)}`, 'success', 7000);
-    } else if (res.ok) {
-      toast(`✓ Faucet request sent! Balance will update shortly.`, 'success');
+function getFaucetLastUsed(address) {
+  try {
+    const key = `xerisfun_faucet_${address}`;
+    const ts = localStorage.getItem(key);
+    return ts ? parseInt(ts, 10) : 0;
+  } catch { return 0; }
+}
+
+function setFaucetLastUsed(address) {
+  try {
+    localStorage.setItem(`xerisfun_faucet_${address}`, Date.now().toString());
+  } catch {}
+}
+
+function updateFaucetBtn() {
+  const btn = document.getElementById('faucetBtn');
+  const cooldownEl = document.getElementById('faucetCooldown');
+  if (!btn || !cooldownEl) return;
+
+  if (!state.wallet) {
+    btn.disabled = true;
+    cooldownEl.textContent = 'Connect wallet to use faucet';
+    return;
+  }
+
+  const lastUsed = getFaucetLastUsed(state.wallet.address);
+  const elapsed  = Date.now() - lastUsed;
+  const remaining = FAUCET_COOLDOWN_MS - elapsed;
+
+  if (remaining > 0) {
+    btn.disabled = true;
+    const secs = Math.ceil(remaining / 1000);
+    cooldownEl.textContent = `⏳ Available again in ${secs}s`;
+    // Tick every second
+    if (!faucetCooldownTimer) {
+      faucetCooldownTimer = setInterval(() => {
+        const r = FAUCET_COOLDOWN_MS - (Date.now() - getFaucetLastUsed(state.wallet?.address || ''));
+        if (r <= 0) {
+          clearInterval(faucetCooldownTimer);
+          faucetCooldownTimer = null;
+          updateFaucetBtn();
+        } else {
+          cooldownEl.textContent = `⏳ Available again in ${Math.ceil(r / 1000)}s`;
+        }
+      }, 1000);
+    }
+  } else {
+    btn.disabled = false;
+    cooldownEl.textContent = `Tap to receive ${CONFIG.FAUCET_AMOUNT} XRS instantly`;
+  }
+}
+
+async function requestFaucet(address) {
+  const btn        = document.getElementById('faucetBtn');
+  const cooldownEl = document.getElementById('faucetCooldown');
+  if (!address || !btn || btn.disabled) return;
+
+  btn.disabled  = true;
+  btn.innerHTML = `<span class="faucet-icon">⏳</span><span class="faucet-btn-text">REQUESTING…</span>`;
+  cooldownEl.textContent = 'Contacting Xeris node…';
+  setStatus(`Requesting ${CONFIG.FAUCET_AMOUNT} XRS from faucet…`);
+
+  try {
+    // XRS addresses are pure base58 alphanumeric — safe in URL paths as-is.
+    const amt = CONFIG.FAUCET_AMOUNT;
+
+    // Helper: fetch one URL, parse result, return { ok, data }
+    async function tryUrl(url) {
+      try {
+        const res  = await fetch(url, { method: 'GET' });
+        const text = await res.text();
+        console.log('[xeris.fun] faucet', url.slice(-60), '→', res.status, text.slice(0, 100));
+        let parsed = {};
+        try { parsed = JSON.parse(text); }
+        catch { if (text.trim()) parsed = { raw: text.trim() }; }
+        return { ok: res.status >= 200 && res.status < 300, data: parsed, status: res.status };
+      } catch (e) {
+        console.warn('[xeris.fun] faucet fetch error:', e.message);
+        return { ok: false, data: {}, status: 0 };
+      }
+    }
+
+    let result = { ok: false, data: {} };
+
+    // Attempt 1: proxy with raw address (no encoding — base58 is URL-safe)
+    if (!result.ok && IS_PROD) {
+      result = await tryUrl(`/api/proxy?target=net&path=%2Fairdrop%2F${address}%2F${amt}`);
+    }
+
+    // Attempt 2: proxy with percent-encoded address (belt-and-suspenders)
+    if (!result.ok && IS_PROD) {
+      result = await tryUrl(`/api/proxy?target=net&path=${encodeURIComponent(`/airdrop/${address}/${amt}`)}`);
+    }
+
+    // Attempt 3: direct HTTP (blocked by mixed-content on HTTPS, but works on localhost)
+    if (!result.ok) {
+      result = await tryUrl(`http://${CONFIG.NODE_IP}:${CONFIG.NET_PORT}/airdrop/${address}/${amt}`);
+    }
+
+    const d   = result.data;
+    const sig = d.signature || d.txid || d.id || d.tx || d.hash
+             || (typeof d.raw === 'string' && d.raw.length > 20 && !/\s/.test(d.raw) ? d.raw : null);
+    const explorerUrl = sig ? CONFIG.txLink(sig) : null;
+
+    if (result.ok || sig) {
+      setFaucetLastUsed(address);
+      if (sig) {
+        toastTx(`✓ ${amt} XRS airdropped!`, sig, explorerUrl, 'success', 12000);
+        cooldownEl.textContent = `✓ ${amt} XRS sent! Balance updating…`;
+      } else {
+        toast(`✓ Faucet accepted! ${amt} XRS incoming…`, 'success', 7000);
+        cooldownEl.textContent = `✓ Request accepted — balance updating…`;
+      }
+      // Poll balance every 3s for 30s
+      let tries = 0;
+      const poll = setInterval(async () => {
+        await refreshBalance();
+        if (++tries >= 10) { clearInterval(poll); setStatus(''); }
+      }, 3000);
     } else {
-      toast(`Faucet returned: ${data.error || data.message || 'check balance in a moment'}`, 'info');
+      const msg = d.error || d.message || d.msg
+               || (result.status ? `HTTP ${result.status}` : 'Node unreachable');
+      toast(`Faucet failed: ${msg}`, 'error', 7000);
+      cooldownEl.textContent = `Error: ${msg}`;
+      setStatus('');
     }
-    // Poll balance a few times to show update
-    let tries = 0;
-    const poll = setInterval(async () => {
-      await refreshBalance();
-      if (++tries >= 5) clearInterval(poll);
-    }, 3000);
+
   } catch (e) {
-    toast(`Faucet error: ${e.message}`, 'error');
-  } finally {
+    console.error('[xeris.fun] faucet error:', e);
+    toast(`Faucet error: ${e.message}`, 'error', 5000);
+    cooldownEl.textContent = 'Error — try again';
     setStatus('');
-    if (faucetBtn) {
-      faucetBtn.style.pointerEvents = '';
-      faucetBtn.textContent = '↗ Need XRS? Get from testnet faucet';
-    }
+  } finally {
+    btn.innerHTML = `
+      <span class="faucet-icon">🚰</span>
+      <span class="faucet-btn-text">GET FREE XRS</span>
+      <span class="faucet-amount-badge" id="faucetAmountBadge">${CONFIG.FAUCET_AMOUNT} XRS</span>
+    `;
+    updateFaucetBtn();
   }
 }
 
 // ══════════════════════════════════════════════
-//  WALLET
+//  USERNAME SYSTEM
 // ══════════════════════════════════════════════
-function onWalletConnected(address) {
-  state.wallet = { address };
-  const btn = document.getElementById('connectBtn');
-  btn.textContent = shortAddr(address);
-  btn.classList.add('connected');
-  btn.setAttribute('aria-label', `Connected: ${address}. Click to disconnect.`);
 
-  document.getElementById('buyBtn').disabled = false;
+// Emoji avatars assigned per address for visual flair
+const AVATARS = ['🎮','🚀','🦊','🎯','⚡','🔥','💎','🌙','🎲','🏆',
+                 '🦁','🐉','🎪','🌊','🎸','🤖','👾','🦅','🍀','🌟'];
+
+function getAvatar(address) {
+  if (!address) return '🎮';
+  let hash = 0;
+  for (let i = 0; i < address.length; i++) hash = (hash * 31 + address.charCodeAt(i)) | 0;
+  return AVATARS[Math.abs(hash) % AVATARS.length];
+}
+
+// Get display name for any address — username or shortened address
+function getDisplayName(address) {
+  if (!address) return '???';
+  return state.usernames[address] || shortAddr(address);
+}
+
+// Validate username format
+function validateUsername(raw) {
+  const u = (raw || '').trim();
+  if (u.length < 3)  return { ok: false, msg: '⚠ Must be at least 3 characters' };
+  if (u.length > 20) return { ok: false, msg: '⚠ Must be 20 characters or less' };
+  if (!/^[a-zA-Z0-9_]+$/.test(u)) return { ok: false, msg: '⚠ Only letters, numbers and underscores' };
+  if (/^[_]/.test(u))             return { ok: false, msg: '⚠ Cannot start with underscore' };
+  // Check uniqueness (case-insensitive)
+  const lower = u.toLowerCase();
+  const taken = Object.entries(state.usernames).some(
+    ([addr, name]) => name.toLowerCase() === lower && addr !== state.wallet?.address
+  );
+  if (taken) return { ok: false, msg: '⚠ Username already taken — try another' };
+  return { ok: true, msg: `✓ @${u} is available!` };
+}
+
+// Save username for current wallet
+function saveUsername(username) {
+  if (!state.wallet) return;
+  const clean = username.trim();
+  state.usernames[state.wallet.address] = clean;
+  // Persist
+  try {
+    localStorage.setItem('xerisfun_usernames', JSON.stringify(state.usernames));
+  } catch {}
+}
+
+// Load persisted usernames from localStorage
+function loadUsernames() {
+  try {
+    const saved = localStorage.getItem('xerisfun_usernames');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed && typeof parsed === 'object') {
+        state.usernames = { ...state.usernames, ...parsed };
+      }
+    }
+  } catch {}
+}
+
+// Open the username modal for a freshly connected wallet
+function promptUsername(address) {
+  // If already has a username, skip
+  if (state.usernames[address]) {
+    updateConnectBtnLabel();
+    return;
+  }
+
+  const avatar = getAvatar(address);
+  document.getElementById('usernameAvatar').textContent = avatar;
+  document.getElementById('usernameInput').value = '';
+  document.getElementById('usernameError').textContent = '3–20 chars · letters, numbers, underscores only';
+  document.getElementById('usernameError').className = 'hint';
+  document.getElementById('usernameConfirmBtn').disabled = true;
+  document.getElementById('usernameInput').classList.remove('taken', 'available');
+  openModal('usernameModal');
+  setTimeout(() => document.getElementById('usernameInput').focus(), 200);
+}
+
+function handleUsernameConfirm() {
+  const raw = document.getElementById('usernameInput').value;
+  const result = validateUsername(raw);
+  if (!result.ok) {
+    document.getElementById('usernameError').textContent = result.msg;
+    document.getElementById('usernameError').className = 'err';
+    return;
+  }
+  saveUsername(raw.trim());
+  closeModal('usernameModal');
+  const name = state.usernames[state.wallet.address];
+  updateConnectBtnLabel();
+  toast(`✓ Username set: @${name}`, 'success', 4000);
+  renderPlayers();
+  renderWinners();
+}
+
+function handleUsernameSkip() {
+  closeModal('usernameModal');
+  updateConnectBtnLabel();
+}
+
+// Update header button to show username if set
+function updateConnectBtnLabel() {
+  if (!state.wallet) return;
+  const btn = document.getElementById('connectBtn');
+  const name = state.usernames[state.wallet.address];
+  btn.textContent = name ? `@${name}` : shortAddr(state.wallet.address);
+}
+
+// Username input live validation
+document.getElementById('usernameInput').addEventListener('input', function() {
+  const raw = this.value;
+  const errEl = document.getElementById('usernameError');
+  const confirmBtn = document.getElementById('usernameConfirmBtn');
+
+  if (!raw) {
+    errEl.textContent = '3–20 chars · letters, numbers, underscores only';
+    errEl.className = 'hint';
+    confirmBtn.disabled = true;
+    this.classList.remove('taken', 'available');
+    return;
+  }
+
+  const result = validateUsername(raw);
+  errEl.textContent = result.msg;
+  if (result.ok) {
+    errEl.className = 'ok';
+    this.classList.remove('taken');
+    this.classList.add('available');
+    confirmBtn.disabled = false;
+  } else {
+    errEl.className = 'err';
+    this.classList.remove('available');
+    this.classList.add('taken');
+    confirmBtn.disabled = true;
+  }
+});
+
+document.getElementById('usernameInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') handleUsernameConfirm();
+});
+
+document.getElementById('usernameConfirmBtn').addEventListener('click', handleUsernameConfirm);
+document.getElementById('usernameSkipBtn').addEventListener('click', handleUsernameSkip);
+
+// ── WALLET PROVIDER ──
+// Cached reference to the active injected wallet provider
+let _xerisProvider = null;
+
+// ── Probe all known injection points ──
+// The Xeris wallet browser is Solana-compatible (CAIP-2: solana:<genesis>).
+// It may inject as window.xeris, window.xrs, OR window.solana (without any isXeris flag).
+// We accept window.solana unless Phantom/Brave explicitly claim it.
+function getXerisProvider() {
+  if (_xerisProvider) return _xerisProvider;
+
+  const candidates = [
+    window.xeris,
+    window.xrs,
+    window.XRS,
+    window.XerisWallet,
+    window.xeriswallet,
+    window.xerisProvider,
+    window.xerisWallet,
+    window.xrsWallet,
+    // Solana-compatible with Xeris flags
+    (window.solana?.isXeris || window.solana?.isXRS || window.solana?.isXerisWallet)
+      ? window.solana : null,
+    // Generic window.solana — Xeris wallet uses Solana namespace but may not set isXeris
+    // Accept it ONLY if Phantom/Brave/other known wallets are NOT present
+    (window.solana
+      && !window.solana.isPhantom
+      && !window.solana.isBraveWallet
+      && !window.solana.isBackpack
+      && !window.solana.isSolflare
+      ? window.solana : null),
+  ];
+
+  const p = candidates.find(c => c != null) || null;
+  if (p) _xerisProvider = p;  // cache on first hit
+  return p;
+}
+
+function isInsideXerisBrowser() {
+  const ua = (navigator.userAgent || '').toLowerCase();
+  return !!getXerisProvider()
+      || ua.includes('xeris')
+      || ua.includes('xrswallet')
+      || ua.includes('xeriswallet');
+}
+
+// ── Late-injection poller ──
+// Wallet browsers inject window.solana/window.xeris AFTER DOMContentLoaded.
+// Poll every 200ms for up to 4 seconds, then once more at 6s.
+let _providerPollTimer = null;
+function startProviderPoller() {
+  if (_providerPollTimer) return;
+  let attempts = 0;
+  const intervals = [200, 400, 600, 1000, 1500, 2000, 3000, 4000, 6000];
+  function poll() {
+    attempts++;
+    const p = getXerisProvider();
+    if (p) {
+      // Provider found — show the XERIS WALLET button and link to any pasted session
+      const injectedBtn = document.getElementById('xerisInjectedBtn');
+      const sub = document.getElementById('connectModalSub');
+      if (injectedBtn) injectedBtn.style.display = 'flex';
+      if (sub && !state.wallet) sub.textContent = 'Xeris wallet detected — tap to connect.';
+
+      // If user already connected via paste, silently upgrade to injected
+      if (state.wallet && state.wallet.method === 'paste' && !state.wallet._providerLinked) {
+        state.wallet._providerLinked = true;
+        toast('✓ Xeris wallet provider linked — you can now sign transactions!', 'success', 4000);
+      }
+      return; // done
+    }
+    if (attempts < intervals.length) {
+      setTimeout(poll, intervals[attempts] - (intervals[attempts - 1] || 0));
+    }
+  }
+  _providerPollTimer = setTimeout(poll, intervals[0]);
+}
+
+// Called when any connection method succeeds
+function onWalletConnected(address, method) {
+  state.wallet = { address, method };
+  const btn = document.getElementById('connectBtn');
+  const name = state.usernames[address];
+  btn.textContent = name ? `@${name}` : shortAddr(address);
+  btn.classList.add('connected');
+  btn.setAttribute('aria-label', `Connected: ${address}. Tap to disconnect.`);
+
+  document.getElementById('buyBtn').disabled   = false;
   document.getElementById('buyBtn').textContent = 'BUY TICKETS';
 
-  const fl = document.getElementById('faucetLink');
-  fl.href = '#';
-  fl.onclick = (e) => { e.preventDefault(); requestFaucet(address); };
+  // Wire faucet button
+  const faucetBtn = document.getElementById('faucetBtn');
+  if (faucetBtn) {
+    faucetBtn.onclick = () => requestFaucet(address);
+    updateFaucetBtn();
+  }
 
-  toast(`✓ Wallet connected: ${shortAddr(address)}`, 'success');
+  const labels = { injected:'Xeris Wallet', paste:'Address Paste', wc:'WalletConnect', demo:'Demo' };
+  toast(`✓ Connected via ${labels[method] || method}: ${shortAddr(address)}`, 'success', 5000);
   closeModal('connectModal');
+  closeModal('pasteModal');
   refreshBalance();
+
+  // Prompt for username after a short delay (let modals close first)
+  setTimeout(() => promptUsername(address), 400);
 }
 
 function onWalletDisconnected() {
+  // Formally disconnect the injected provider if it supports it
+  if (_xerisProvider && typeof _xerisProvider.disconnect === 'function') {
+    _xerisProvider.disconnect().catch(() => {});
+  }
+  _xerisProvider = null;
+
   state.wallet = null;
   state.balance = 0;
   const btn = document.getElementById('connectBtn');
   btn.textContent = 'CONNECT WALLET';
   btn.classList.remove('connected');
-  document.getElementById('buyBtn').disabled = true;
+  document.getElementById('buyBtn').disabled   = true;
   document.getElementById('buyBtn').textContent = 'CONNECT WALLET FIRST';
+  // Reset faucet button
+  const faucetBtn = document.getElementById('faucetBtn');
+  if (faucetBtn) {
+    faucetBtn.disabled = true;
+    faucetBtn.onclick  = null;
+  }
+  const cooldownEl = document.getElementById('faucetCooldown');
+  if (cooldownEl) cooldownEl.textContent = 'Connect wallet to use faucet';
   setStatus('');
   toast('Wallet disconnected', 'info');
 }
@@ -1162,80 +1934,263 @@ function onWalletDisconnected() {
 async function refreshBalance() {
   if (!state.wallet) return;
   const lamports = await fetchBalance(state.wallet.address);
-  state.balance = lamports;
+  state.balance  = lamports;
   const xrs = (lamports / CONFIG.LAMPORTS).toFixed(4);
-  setStatus(`Balance: ${xrs} XRS`);
-  // Warn if balance too low to buy
   const qty = clampInt(document.getElementById('ticketCount').value, 1, CONFIG.MAX_TICKETS);
   const needed = qty * CONFIG.TICKET_PRICE * CONFIG.LAMPORTS;
   if (lamports > 0 && lamports < needed) {
-    setStatus(`Balance: ${xrs} XRS — insufficient for ${qty} ticket(s). Use faucet ↓`);
+    setStatus(`Balance: ${xrs} XRS — need ${(needed/CONFIG.LAMPORTS).toFixed(0)} XRS for ${qty} ticket(s). Use the faucet button ↓`);
+  } else {
+    setStatus(`Balance: ${xrs} XRS`);
   }
 }
 
-// ── DEMO WALLET (generate Base58-like address from random bytes) ──
+// ── b58 helper ──
 function b58Encode(bytes) {
-  const ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-  let num = BigInt('0x' + Array.from(bytes).map(b => b.toString(16).padStart(2,'0')).join(''));
-  let encoded = '';
-  while (num > 0n) {
-    encoded = ALPHABET[Number(num % 58n)] + encoded;
-    num = num / 58n;
-  }
-  for (const b of bytes) { if (b === 0) encoded = '1' + encoded; else break; }
-  return encoded;
+  const AB = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+  let n = BigInt('0x' + Array.from(bytes).map(b => b.toString(16).padStart(2,'0')).join(''));
+  let s = '';
+  while (n > 0n) { s = AB[Number(n % 58n)] + s; n /= 58n; }
+  for (const b of bytes) { if (b === 0) s = '1' + s; else break; }
+  return s;
 }
 
-async function connectDemoWallet() {
-  const bytes = new Uint8Array(32);
-  crypto.getRandomValues(bytes);
-  const addr = b58Encode(bytes).slice(0, 44);
-  onWalletConnected(addr);
-  toast('Demo wallet ready — click "Get from testnet faucet" to load XRS', 'info', 7000);
+function isValidXrsAddress(addr) {
+  return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test((addr || '').trim());
 }
 
-// ── WALLETCONNECT ──
-async function connectWalletConnect() {
-  closeModal('connectModal');
-
-  if (!CONFIG.WC_PROJECT_ID || CONFIG.WC_PROJECT_ID === 'YOUR_WALLETCONNECT_PROJECT_ID') {
-    toast('WalletConnect Project ID not set — switching to Demo Wallet', 'info', 4000);
-    setTimeout(() => connectDemoWallet(), 300);
+// ────────────────────────────────────────────
+//  METHOD 1 — XERIS INJECTED WALLET
+//  The Xeris wallet browser injects a Solana-compatible
+//  provider (window.solana or window.xeris).
+//  We call connect(), get the public key, cache the provider,
+//  then use signMessage() for transaction signing.
+// ────────────────────────────────────────────
+async function connectXerisInjected() {
+  // Re-scan for provider in case of late injection
+  const provider = getXerisProvider();
+  if (!provider) {
+    toast('Xeris wallet not detected. Make sure you are in the Xeris wallet browser.', 'error', 7000);
     return;
   }
 
+  setStatus('Connecting to Xeris wallet…');
+  try {
+    let address = null;
+
+    // ── Step 1: Call connect() to request access and get public key ──
+    // Solana-compatible wallets expose connect({ onlyIfTrusted }) like Phantom
+    if (typeof provider.connect === 'function') {
+      try {
+        const resp = await provider.connect({ onlyIfTrusted: false });
+        // Solana-style: resp.publicKey is a PublicKey object with toString()
+        address = resp?.publicKey?.toString?.()
+               || resp?.publicKey          // may already be a string
+               || resp?.address
+               || resp?.pubkey
+               || provider.publicKey?.toString?.()
+               || provider.address
+               || null;
+        console.log('[xeris.fun] connect() resp:', resp, 'address:', address);
+      } catch (e) {
+        // If connect() itself throws a rejection, rethrow so user sees it
+        if (e.code === 4001 || /rejected|denied|cancel/i.test(e.message || '')) throw e;
+        console.warn('[xeris.fun] connect() failed:', e.message);
+      }
+    }
+
+    // ── Step 2: Try requestAccounts() — EVM/MetaMask style ──
+    if (!address && typeof provider.requestAccounts === 'function') {
+      try {
+        const accounts = await provider.requestAccounts();
+        address = Array.isArray(accounts) ? (accounts[0]?.address || accounts[0]) : accounts?.address;
+        console.log('[xeris.fun] requestAccounts:', accounts);
+      } catch (e) {
+        if (e.code === 4001 || /rejected|denied/i.test(e.message || '')) throw e;
+      }
+    }
+
+    // ── Step 3: Try getAddress() ──
+    if (!address && typeof provider.getAddress === 'function') {
+      try { address = await provider.getAddress(); } catch {}
+    }
+
+    // ── Step 4: Read already-exposed properties (no prompt needed) ──
+    if (!address) {
+      const pk = provider.publicKey;
+      if (pk) {
+        address = typeof pk.toString === 'function' ? pk.toString() : String(pk);
+      } else if (provider.address) {
+        address = provider.address;
+      } else if (Array.isArray(provider.accounts) && provider.accounts[0]) {
+        address = provider.accounts[0]?.address || provider.accounts[0];
+      }
+    }
+
+    // ── Step 5: Try provider.request() — EIP-1193 style ──
+    if (!address && typeof provider.request === 'function') {
+      try {
+        const accounts = await provider.request({ method: 'connect' });
+        address = Array.isArray(accounts) ? accounts[0] : accounts?.address || accounts;
+      } catch {}
+    }
+
+    if (!address || !isValidXrsAddress(address)) {
+      throw new Error(
+        address
+          ? `Invalid address format: ${address}`
+          : 'Wallet returned no address — make sure you are logged in to Xeris wallet'
+      );
+    }
+
+    // ── Cache provider and wire events ──
+    _xerisProvider = provider;
+
+    if (typeof provider.on === 'function') {
+      try { provider.removeAllListeners?.('accountChanged');  } catch {}
+      try { provider.removeAllListeners?.('accountsChanged'); } catch {}
+      try { provider.removeAllListeners?.('disconnect');      } catch {}
+
+      provider.on('accountChanged',  (pk) => {
+        const next = pk?.toString?.() || (typeof pk === 'string' ? pk : null);
+        if (next && isValidXrsAddress(next)) onWalletConnected(next, 'injected');
+        else onWalletDisconnected();
+      });
+      provider.on('accountsChanged', (accs) => {
+        if (accs?.length) onWalletConnected(accs[0]?.address || accs[0], 'injected');
+        else onWalletDisconnected();
+      });
+      provider.on('disconnect', onWalletDisconnected);
+    }
+
+    onWalletConnected(address, 'injected');
+
+  } catch (e) {
+    _xerisProvider = null;
+    setStatus('');
+    if (e.code === 4001 || /rejected|denied|cancel/i.test(e.message || '')) {
+      toast('Connection rejected — please approve in your Xeris wallet', 'error', 5000);
+    } else {
+      toast(`Connection failed: ${e.message}`, 'error', 7000);
+    }
+    console.error('[xeris.fun] connectXerisInjected error:', e);
+  }
+}
+
+// ────────────────────────────────────────────
+//  METHOD 2 — PASTE ADDRESS
+// ────────────────────────────────────────────
+function openPasteModal() {
+  closeModal('connectModal');
+  document.getElementById('pasteAddrInput').value = '';
+  document.getElementById('pasteAddrError').textContent = '';
+  openModal('pasteModal');
+  setTimeout(() => document.getElementById('pasteAddrInput').focus(), 200);
+}
+
+function confirmPasteAddress() {
+  const raw = (document.getElementById('pasteAddrInput').value || '').trim();
+  const err = document.getElementById('pasteAddrError');
+  if (!raw) { err.textContent = '⚠ Please paste your XRS address.'; return; }
+  if (!isValidXrsAddress(raw)) { err.textContent = '⚠ Invalid format — must be 32–44 base58 characters.'; return; }
+  err.textContent = '';
+  onWalletConnected(raw, 'paste');
+}
+
+// ────────────────────────────────────────────
+//  METHOD 3 — WALLETCONNECT
+// ────────────────────────────────────────────
+async function connectWalletConnect() {
+  closeModal('connectModal');
+  if (!CONFIG.WC_PROJECT_ID || CONFIG.WC_PROJECT_ID === 'YOUR_WALLETCONNECT_PROJECT_ID') {
+    toast('WalletConnect not configured — use Paste Address instead', 'info', 4000);
+    setTimeout(() => openModal('pasteModal'), 300);
+    return;
+  }
   toast('Initialising WalletConnect…', 'info');
   try {
     const { createAppKit } = await import('https://cdn.jsdelivr.net/npm/@reown/appkit@1.6.8/dist/index.js');
-    const xerisChain = {
-      id: 'solana:xeris-testnet',
-      name: 'Xeris Testnet',
-      nativeCurrency: { name: 'XerisCoin', symbol: 'XRS', decimals: 9 },
-      rpcUrls: { default: { http: [CONFIG.RPC_URL] } },
-    };
     const appKit = createAppKit({
       projectId: CONFIG.WC_PROJECT_ID,
-      chains: [xerisChain],
+      chains: [{
+        id: 'solana:xeris-testnet',
+        name: 'Xeris Testnet',
+        nativeCurrency: { name: 'XerisCoin', symbol: 'XRS', decimals: 9 },
+        rpcUrls: { default: { http: [CONFIG.RPC_URL] } },
+      }],
       metadata: {
-        name: 'Solprize',
+        name: 'Xeris.fun',
         description: 'On-chain lottery on Xeris blockchain',
         url: window.location.origin,
         icons: [window.location.origin + '/icon.png'],
       },
     });
     appKit.open();
-    appKit.subscribeState((s) => {
-      if (appKit.getAddress()) onWalletConnected(appKit.getAddress());
+    appKit.subscribeState(() => {
+      const addr = appKit.getAddress();
+      if (addr) onWalletConnected(addr, 'wc');
     });
   } catch (e) {
-    toast('WalletConnect failed — switching to Demo Wallet', 'error', 4000);
-    setTimeout(() => connectDemoWallet(), 500);
+    toast('WalletConnect failed — use Paste Address', 'error', 4000);
+    setTimeout(() => openModal('pasteModal'), 300);
   }
+}
+
+// ────────────────────────────────────────────
+//  METHOD 4 — DEMO
+// ────────────────────────────────────────────
+function connectDemoWallet() {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  const addr = b58Encode(bytes).slice(0, 44);
+  onWalletConnected(addr, 'demo');
+  toast('Demo wallet active — tap "Get from testnet faucet" to load XRS', 'info', 7000);
+}
+
+// ── On load: detect injected wallet, with retries for late injection ──
+// The Xeris wallet browser injects window.xeris (or window.solana) AFTER
+// DOMContentLoaded. We poll up to 3 seconds to catch it.
+// ── On load: detect injected wallet ──
+function initWalletUI() {
+  const sub         = document.getElementById('connectModalSub');
+  const injectedBtn = document.getElementById('xerisInjectedBtn');
+
+  // Check immediately (provider may already be injected)
+  if (isInsideXerisBrowser()) {
+    if (injectedBtn) injectedBtn.style.display = 'flex';
+    if (sub) sub.textContent = 'Xeris wallet detected — tap to connect.';
+
+    // Try silent auto-connect (only if already trusted/approved)
+    setTimeout(async () => {
+      const provider = getXerisProvider();
+      if (!provider || state.wallet) return;
+      try {
+        if (typeof provider.connect === 'function') {
+          const resp = await provider.connect({ onlyIfTrusted: true });
+          const address = resp?.publicKey?.toString?.()
+                       || resp?.address
+                       || provider.publicKey?.toString?.()
+                       || provider.address;
+          if (address && isValidXrsAddress(address)) {
+            _xerisProvider = provider;
+            onWalletConnected(address, 'injected');
+          }
+        }
+      } catch { /* Not yet trusted — user will tap the button */ }
+    }, 300);
+  } else {
+    if (sub) sub.textContent = 'Open xeris.fun inside the Xeris wallet browser, or paste your address below.';
+  }
+
+  // Start poller regardless — catches late injection (wallet injects after DOMContentLoaded)
+  startProviderPoller();
 }
 
 // ══════════════════════════════════════════════
 //  LOTTERY LOGIC
 // ══════════════════════════════════════════════
+let isDrawing = false; // mutex — prevents runDraw firing every second while drawTarget===0
+
 function totalTickets() {
   return state.players.reduce((s, p) => s + p.tickets, 0);
 }
@@ -1259,7 +2214,7 @@ function runDraw() {
   const total = totalTickets();
   if (total === 0) return;
 
-  // Pick winner by weighted random (ticket count = weight)
+  // ── Weighted random winner selection ──
   const roll = Math.floor(Math.random() * total);
   let cumulative = 0;
   let winner = null;
@@ -1269,25 +2224,41 @@ function runDraw() {
   }
   if (!winner) winner = state.players[state.players.length - 1];
 
-  const prizeXRS = parseFloat(poolXRS());
+  // ── Calculate split ──
+  const totalPool   = parseFloat(poolXRS());
+  const winnerPrize = parseFloat((totalPool * CONFIG.WINNER_SHARE).toFixed(4));  // 95%
+  const treasuryCut = parseFloat((totalPool * CONFIG.TREASURY_SHARE).toFixed(4)); // 5%
 
+  // ── Record winner ──
   state.winners.unshift({
-    address: winner.address,
-    amount: prizeXRS,
-    round: state.round,
+    address:   winner.address,
+    username:  state.usernames[winner.address] || null,
+    amount:    winnerPrize,
+    treasury:  treasuryCut,
+    totalPool: totalPool,
+    round:     state.round,
   });
 
-  // Check if current player won
+  // ── Dispatch payout transactions ──
+  sendPayout(winner.address, winnerPrize, 'winner', state.round);
+  sendPayout(CONFIG.TREASURY, treasuryCut, 'treasury', state.round);
+
+  // ── Show win modal if current player won ──
   if (state.wallet && winner.address === state.wallet.address) {
-    document.getElementById('winAmount').textContent = `${prizeXRS} XRS`;
+    document.getElementById('winAmount').textContent = `${winnerPrize} XRS`;
+    document.getElementById('winTreasuryNote').textContent =
+      `(${treasuryCut} XRS → treasury for marketing & development)`;
     openModal('winModal');
   }
 
-  toast(`Round #${state.round} winner: ${shortAddr(winner.address)} won ${prizeXRS} XRS!`, 'success', 8000);
+  toast(
+    `🏆 Round #${state.round}: ${getDisplayName(winner.address)} wins ${winnerPrize} XRS! (${treasuryCut} XRS → treasury)`,
+    'success', 10000
+  );
 
-  // New round
+  // ── Advance round ──
   state.round++;
-  state.players = [];
+  state.players  = [];
   state.drawTarget = Date.now() + CONFIG.DRAW_INTERVAL * 1000;
 
   renderPlayers();
@@ -1295,131 +2266,257 @@ function runDraw() {
   updateStats();
 }
 
-// ══════════════════════════════════════════════
-//  BUY FLOW
-// ══════════════════════════════════════════════
-async function handleBuy() {
-  if (!state.wallet)   { toast('Connect your wallet first', 'error'); return; }
-  if (state.isBuying)  { toast('Purchase already in progress…', 'info'); return; }
-
-  const qty = clampInt(document.getElementById('ticketCount').value, 1, CONFIG.MAX_TICKETS);
-  document.getElementById('ticketCount').value = qty;
-
-  const costXRS   = qty * CONFIG.TICKET_PRICE;
-  const costLamps = Math.round(costXRS * CONFIG.LAMPORTS);
-
-  // Balance check
-  if (state.balance > 0 && state.balance < costLamps) {
-    toast(`Insufficient balance — you need ${costXRS.toFixed(4)} XRS. Use the faucet ↓`, 'error', 6000);
-    return;
-  }
-
-  state.isBuying = true;
-  const btn = document.getElementById('buyBtn');
-  btn.disabled  = true;
-  btn.textContent = 'PROCESSING…';
-
+// Submit a payout transaction to the Xeris network
+async function sendPayout(toAddress, amountXRS, type, round) {
   try {
-    // ── Step 1: Get latest blockhash from Xeris node ──
-    setStatus('Fetching blockhash from Xeris node…');
-    const bhResult  = await getLatestBlockhash();
-    const blockhash = bhResult?.blockhash
-                   || bhResult?.value?.blockhash
-                   || bhResult?.result?.blockhash
-                   || ('testnet-bh-' + Date.now());
-    const lastValidBlockHeight = bhResult?.lastValidBlockHeight
-                              || bhResult?.value?.lastValidBlockHeight
-                              || null;
+    const lamports = Math.round(amountXRS * CONFIG.LAMPORTS);
+    const bhResult = await getLatestBlockhash();
+    const blockhash = bhResult?.blockhash || bhResult?.value?.blockhash || ('payout-bh-' + Date.now());
 
-    // ── Step 2: Construct Xeris-compatible transfer transaction ──
-    // Xeris uses Solana-compatible transaction format
     const txPayload = {
       recentBlockhash: blockhash,
-      lastValidBlockHeight: lastValidBlockHeight,
-      feePayer: state.wallet.address,
-      instructions: [
-        {
-          programId: '11111111111111111111111111111111', // System program
-          type: 'transfer',
-          keys: [
-            { pubkey: state.wallet.address, isSigner: true,  isWritable: true },
-            { pubkey: CONFIG.TREASURY,      isSigner: false, isWritable: true },
-          ],
-          data: {
-            instruction: 2,           // SystemProgram Transfer
-            lamports: costLamps,
-          },
-        },
-      ],
-      meta: {
-        app:    'solprize',
-        round:  state.round,
-        tickets: qty,
-        buyer:  state.wallet.address,
-        treasury: CONFIG.TREASURY,
-      },
+      feePayer: CONFIG.TREASURY,
+      instructions: [{
+        programId: '11111111111111111111111111111111',
+        type: 'transfer',
+        keys: [
+          { pubkey: CONFIG.TREASURY, isSigner: true,  isWritable: true },
+          { pubkey: toAddress,       isSigner: false, isWritable: true },
+        ],
+        data: { instruction: 2, lamports },
+      }],
+      meta: { app: 'xeris.fun', round, type, amount: amountXRS },
     };
 
     const txBase64 = btoa(JSON.stringify(txPayload));
 
-    // ── Step 3: Submit to Xeris network ──
-    setStatus('Submitting transaction to Xeris testnet…');
-    let txSig = null;
-    let submitOk = false;
-
-    // Try port 56001 /submit first (preferred)
+    // Try submit endpoint first
     try {
-      const r = await fetch(`${CONFIG.NET_URL}/submit`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tx_base64: txBase64 }),
-      });
-      const d = await r.json();
-      txSig   = d.signature || d.txid || d.id || d.tx || null;
-      submitOk = r.ok;
+      const d = await xerisSubmit(txBase64);
+      const sig = d.signature || d.txid || d.id;
+      if (sig) {
+        console.log(`[xeris.fun] ${type} payout tx: ${sig}`);
+        return sig;
+      }
     } catch {}
 
-    // Fallback: RPC sendTransaction
-    if (!submitOk) {
+    // Fallback: RPC
+    try {
+      const sig2 = await xerisRPC('sendTransaction', [txBase64]);
+      if (sig2) { console.log(`[xeris.fun] ${type} payout rpc tx: ${sig2}`); return sig2; }
+    } catch {}
+  } catch (e) {
+    console.warn(`[xeris.fun] ${type} payout failed:`, e.message);
+  }
+  return null;
+}
+
+// ══════════════════════════════════════════════
+//  BUY FLOW — real on-chain transaction via Xeris wallet
+// ══════════════════════════════════════════════
+async function handleBuy() {
+  if (!state.wallet)  { toast('Connect your wallet first', 'error'); return; }
+  if (state.isBuying) { toast('Purchase already in progress…', 'info'); return; }
+
+  const qty      = clampInt(document.getElementById('ticketCount').value, 1, CONFIG.MAX_TICKETS);
+  document.getElementById('ticketCount').value = qty;
+  const costXRS  = qty * CONFIG.TICKET_PRICE;
+  const costLamps = Math.round(costXRS * CONFIG.LAMPORTS);
+
+  if (state.balance > 0 && state.balance < costLamps) {
+    toast(`Insufficient balance — need ${costXRS} XRS, have ${(state.balance/CONFIG.LAMPORTS).toFixed(2)} XRS. Use faucet ↓`, 'error', 7000);
+    return;
+  }
+
+  // Get the active provider — try cached first, then re-scan (handles late injection)
+  let provider = _xerisProvider;
+  if (!provider) provider = getXerisProvider();
+
+  if (!provider) {
+    if (state.wallet.method === 'demo') {
+      toast('Demo mode cannot sign real transactions. Open xeris.fun in the Xeris wallet browser.', 'error', 7000);
+      return;
+    }
+    if (state.wallet.method === 'paste') {
+      toast('⚠ Wallet provider not found. Tap "Connect Wallet" and choose Xeris Wallet.', 'error', 8000);
+      return;
+    }
+    toast('Xeris wallet disconnected — please reconnect', 'error', 6000);
+    return;
+  }
+
+  // Cache it for this session
+  if (!_xerisProvider) _xerisProvider = provider;
+
+  state.isBuying = true;
+  const btn = document.getElementById('buyBtn');
+  btn.disabled    = true;
+  btn.textContent = 'WAITING FOR WALLET…';
+
+  try {
+    // ── Step 1: Get blockhash from node ──
+    setStatus('Fetching blockhash…');
+    const bhResult  = await getLatestBlockhash();
+    const blockhash = bhResult?.blockhash
+                   || bhResult?.value?.blockhash
+                   || bhResult?.result?.blockhash
+                   || ('bh-' + Date.now());
+
+    // ── Step 2: Build the transaction object ──
+    // Exact format from Xeris developer guide §7:
+    //   { recentBlockhash, instructions: [{ from, to, amount }] }
+    // The wallet signs JSON.stringify(transaction) with its ed25519 key
+    // and the node receives only the signature as tx_base64.
+    const txObject = {
+      recentBlockhash: blockhash,
+      feePayer: state.wallet.address,
+      instructions: [{
+        from:   state.wallet.address,
+        to:     CONFIG.TREASURY,
+        amount: costXRS,                 // XRS units (what the guide uses)
+        lamports: costLamps,             // lamports for precision
+        programId: '11111111111111111111111111111111',
+        type: 'transfer',
+      }],
+      meta: { app: 'xeris.fun', round: state.round, tickets: qty },
+    };
+    const txMessage = JSON.stringify(txObject);   // the bytes the wallet signs
+
+    setStatus('Please approve transaction in Xeris wallet…');
+    btn.textContent = 'APPROVE IN WALLET…';
+
+    let txSig = null;
+    let rejectedByUser = false;
+
+    // Helper to detect user rejection
+    const isRejection = (e) =>
+      e.code === 4001 || e.code === -32603 ||
+      /rejected|denied|cancel|user declin/i.test(e.message || '');
+
+    // ── Strategy A: wallet handles everything — signAndSendTransaction ──
+    // Phantom-style: pass the tx object, wallet signs + submits, returns sig
+    if (!txSig && !rejectedByUser && typeof provider.signAndSendTransaction === 'function') {
       try {
-        const r2 = await xerisRPC('sendTransaction', [txBase64]);
-        txSig    = typeof r2 === 'string' ? r2 : r2?.signature || r2?.txid || null;
-        submitOk = !!txSig;
-      } catch {}
+        const res = await provider.signAndSendTransaction(txObject);
+        txSig = typeof res === 'string' ? res : res?.signature || res?.txid || res?.id || null;
+        console.log('[xeris.fun] signAndSendTransaction:', res);
+      } catch(e) {
+        if (isRejection(e)) { rejectedByUser = true; }
+        else console.warn('[xeris.fun] signAndSendTransaction failed:', e.message);
+      }
     }
 
-    // On testnet the node may accept but not return a sig — that's fine
-    if (!txSig) txSig = 'testnet-' + Math.random().toString(36).slice(2, 10);
-
-    // ── Step 4: Confirm (poll up to 10s) ──
-    setStatus('Confirming transaction…');
-    let confirmed = false;
-    for (let i = 0; i < 5; i++) {
-      await new Promise(r => setTimeout(r, 1500));
+    // ── Strategy B: provider.request({ method: 'sendTransaction' }) ──
+    if (!txSig && !rejectedByUser && typeof provider.request === 'function') {
       try {
-        const tx = await xerisRPC('getTransaction', [txSig]);
-        if (tx) { confirmed = true; break; }
-      } catch {}
+        const res = await provider.request({ method: 'sendTransaction', params: [txObject] });
+        txSig = typeof res === 'string' ? res : res?.signature || res?.result || null;
+        console.log('[xeris.fun] request sendTransaction:', res);
+      } catch(e) {
+        if (isRejection(e)) { rejectedByUser = true; }
+        else console.warn('[xeris.fun] request sendTransaction failed:', e.message);
+      }
     }
 
-    // ── Step 5: Register in game state ──
+    // ── Strategy C: signMessage → get signature bytes → submit to node ──
+    // Per dev guide: sign the JSON string, encode signature as base64, POST to /submit
+    if (!txSig && !rejectedByUser && typeof provider.signMessage === 'function') {
+      try {
+        setStatus('Sign the transaction in your Xeris wallet…');
+        const encoder = new TextEncoder();
+        const msgBytes = encoder.encode(txMessage);
+        const signed = await provider.signMessage(msgBytes);
+        // signMessage returns { signature: Uint8Array } or just Uint8Array
+        const sigBytes = signed?.signature || signed;
+        const signatureBase64 = btoa(String.fromCharCode(...new Uint8Array(sigBytes)));
+        setStatus('Submitting signed transaction…');
+        btn.textContent = 'SUBMITTING…';
+        // Submit per dev guide: tx_base64 is the signature
+        const d = await xerisSubmit(signatureBase64);
+        txSig = d.signature || d.txid || d.id || d.tx || null;
+        if (!txSig) {
+          // Also try RPC sendTransaction
+          const r = await xerisRPC('sendTransaction', [signatureBase64]);
+          txSig = typeof r === 'string' ? r : r?.signature || null;
+        }
+        console.log('[xeris.fun] signMessage + submit:', txSig);
+      } catch(e) {
+        if (isRejection(e)) { rejectedByUser = true; }
+        else console.warn('[xeris.fun] signMessage failed:', e.message);
+      }
+    }
+
+    // ── Strategy D: signTransaction — wallet signs, we get back signed tx ──
+    if (!txSig && !rejectedByUser && typeof provider.signTransaction === 'function') {
+      try {
+        setStatus('Sign the transaction in your Xeris wallet…');
+        const signed = await provider.signTransaction(txObject);
+        // Extract signature — may be in signed.signature, signed.serialized, or signed itself
+        let submitPayload;
+        if (signed?.signature) {
+          const sb = signed.signature;
+          submitPayload = typeof sb === 'string' ? sb
+            : btoa(String.fromCharCode(...new Uint8Array(sb)));
+        } else {
+          submitPayload = typeof signed === 'string' ? signed : btoa(JSON.stringify(signed));
+        }
+        setStatus('Submitting signed transaction…');
+        btn.textContent = 'SUBMITTING…';
+        const d = await xerisSubmit(submitPayload);
+        txSig = d.signature || d.txid || d.id || d.tx || null;
+        if (!txSig) {
+          const r = await xerisRPC('sendTransaction', [submitPayload]);
+          txSig = typeof r === 'string' ? r : r?.signature || null;
+        }
+        console.log('[xeris.fun] signTransaction + submit:', txSig);
+      } catch(e) {
+        if (isRejection(e)) { rejectedByUser = true; }
+        else console.warn('[xeris.fun] signTransaction failed:', e.message);
+      }
+    }
+
+    // ── Strategy E: Last resort — submit the full tx JSON (some testnets accept unsigned) ──
+    if (!txSig && !rejectedByUser) {
+      try {
+        setStatus('Submitting transaction…');
+        btn.textContent = 'SUBMITTING…';
+        const txBase64 = btoa(unescape(encodeURIComponent(txMessage)));
+        const d = await xerisSubmit(txBase64);
+        txSig = d.signature || d.txid || d.id || d.tx || null;
+        if (!txSig) {
+          const r = await xerisRPC('sendTransaction', [txBase64]);
+          txSig = typeof r === 'string' ? r : r?.signature || null;
+        }
+        console.log('[xeris.fun] unsigned JSON submit:', txSig);
+      } catch(e) {
+        console.warn('[xeris.fun] unsigned submit failed:', e.message);
+      }
+    }
+
+    if (rejectedByUser) throw new Error('Transaction rejected by user');
+
+    // ── Step 4: Update game state ──
     addTickets(state.wallet.address, qty);
-
-    const shortSig = shortAddr(txSig);
-    const explorerUrl = `${CONFIG.API_URL}/v2/tx/${txSig}`;
-    toast(
-      `✓ ${qty} ticket${qty>1?'s':''} bought! Tx: ${shortSig}`,
-      'success', 7000
+    const explorerUrl = CONFIG.txLink(txSig);
+    toastTx(`✓ ${qty} ticket${qty>1?'s':''} bought!`, txSig, explorerUrl, 'success', 12000);
+    setStatusWithLink(
+      `${qty} ticket${qty>1?'s':''} entered — draw in ${getCountdownText()}. Good luck! 🎰`,
+      explorerUrl ? 'Explorer ↗' : null, explorerUrl
     );
-    setStatus(`${qty} ticket${qty>1?'s':''} entered — draw in ${getCountdownText()}. Good luck! 🎰`);
 
-    // ── Step 6: Refresh balance ──
+    // ── Step 5: Refresh balance multiple times ──
     await refreshBalance();
+    setTimeout(refreshBalance, 5000);
+    setTimeout(refreshBalance, 12000);
 
   } catch (err) {
-    console.error('[solprize] buy error:', err);
-    toast(`Purchase failed: ${err.message}`, 'error');
-    setStatus('Transaction failed — try again.');
+    const msg = err.message || String(err);
+    if (/rejected|cancel/i.test(msg)) {
+      toast('Transaction cancelled', 'info', 4000);
+    } else {
+      toast(`Purchase failed: ${msg}`, 'error', 7000);
+    }
+    setStatus('');
   } finally {
     state.isBuying  = false;
     btn.disabled    = false;
@@ -1448,12 +2545,20 @@ function renderPlayers() {
   const rows = state.players
     .slice()
     .sort((a, b) => b.tickets - a.tickets)
-    .map((p, i) => {
-      const pct = ((p.tickets / total) * 100).toFixed(1);
-      const isMe = state.wallet && p.address === state.wallet.address;
-      return `<div class="player-row" ${isMe ? 'style="background:rgba(200,255,0,.04)"' : ''}>
-        <span class="player-addr" title="${esc(p.address)}">${isMe ? '★ ' : ''}${esc(shortAddr(p.address))}</span>
-        <span class="player-tickets">${esc(p.tickets)}</span>
+    .map((p) => {
+      const pct    = ((p.tickets / total) * 100).toFixed(1);
+      const isMe   = state.wallet && p.address === state.wallet.address;
+      const name   = state.usernames[p.address];
+      const avatar = getAvatar(p.address);
+      return `<div class="player-row${isMe ? ' u-me' : ''}" style="${isMe ? 'background:rgba(200,255,0,.04)' : ''}">
+        <span style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:18px;line-height:1;flex-shrink:0;">${avatar}</span>
+          <span>
+            <div class="u-name">${isMe ? '★ ' : ''}${name ? esc('@' + name) : esc(shortAddr(p.address))}</div>
+            ${name ? `<div class="u-addr" title="${esc(p.address)}">${esc(shortAddr(p.address))}</div>` : ''}
+          </span>
+        </span>
+        <span class="player-tickets">${esc(String(p.tickets))}</span>
         <span class="player-pct">${esc(pct)}%</span>
       </div>`;
     }).join('');
@@ -1461,7 +2566,7 @@ function renderPlayers() {
   container.innerHTML = `
     <div class="players-grid">
       <div class="pg-head">
-        <span>Address</span>
+        <span>Player</span>
         <span>Tickets</span>
         <span>Win Chance</span>
       </div>
@@ -1476,41 +2581,62 @@ function renderWinners() {
     return;
   }
 
-  const cards = state.winners.slice(0, 10).map((w, i) => `
+  const cards = state.winners.slice(0, 10).map((w, i) => {
+    const treasuryAmt = w.treasury != null
+      ? w.treasury.toFixed(2)
+      : (w.amount * (CONFIG.TREASURY_SHARE / CONFIG.WINNER_SHARE)).toFixed(2);
+    const name   = w.username || state.usernames[w.address];
+    const avatar = getAvatar(w.address);
+    const display = name ? `@${esc(name)}` : esc(shortAddr(w.address));
+    return `
     <div class="winner-card">
       <div class="winner-left">
         <div class="winner-rank">${i + 1}</div>
+        <span style="font-size:22px;line-height:1;margin-right:10px;">${avatar}</span>
         <div>
-          <div class="winner-addr">${esc(shortAddr(w.address))}</div>
-          <div class="winner-round">ROUND #${esc(w.round)}</div>
+          <div class="winner-addr">${display}</div>
+          ${name ? `<div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);">${esc(shortAddr(w.address))}</div>` : ''}
+          <div class="winner-round">ROUND #${esc(String(w.round))} · POOL: ${esc((w.totalPool || w.amount).toFixed(2))} XRS</div>
         </div>
       </div>
-      <div class="winner-amount">${esc(w.amount.toFixed(4))} XRS</div>
-    </div>`).join('');
+      <div style="text-align:right;">
+        <div class="winner-amount">${esc(w.amount.toFixed(2))} XRS</div>
+        <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-top:2px;">+ ${esc(treasuryAmt)} → treasury</div>
+      </div>
+    </div>`;
+  }).join('');
 
   container.innerHTML = `<div class="winners-list">${cards}</div>`;
 }
 
 function updateStats() {
-  const pool = parseFloat(poolXRS());
+  const pool    = parseFloat(poolXRS());
   const tickets = totalTickets();
   const players = state.players.length;
 
-  document.getElementById('statPool').textContent = pool.toFixed(2);
+  // Winner prize (95%) and treasury cut (5%)
+  const winnerAmt   = parseFloat((pool * CONFIG.WINNER_SHARE).toFixed(4));
+  const treasuryAmt = parseFloat((pool * CONFIG.TREASURY_SHARE).toFixed(4));
+
+  document.getElementById('statPool').textContent    = pool.toFixed(2);
   document.getElementById('statTickets').textContent = tickets;
   document.getElementById('statPlayers').textContent = players;
-  document.getElementById('statRound').textContent = `#${state.round}`;
-  document.getElementById('poolAmount').textContent = pool.toFixed(2);
+  document.getElementById('statRound').textContent   = `#${state.round}`;
+  document.getElementById('poolAmount').textContent  = pool.toFixed(2);
 
-  // Pool fill bar (target = 10 XRS for visual feedback)
-  const fillPct = Math.min(100, (pool / 10) * 100);
+  // Live split display
+  document.getElementById('splitWinner').textContent   = winnerAmt.toFixed(2);
+  document.getElementById('splitTreasury').textContent = treasuryAmt.toFixed(2);
+
+  // Pool fill bar (target = 100 XRS for visual feedback)
+  const fillPct = Math.min(100, (pool / 100) * 100);
   document.getElementById('poolFill').style.width = fillPct + '%';
   document.getElementById('poolBar').setAttribute('aria-valuenow', fillPct);
 
   // Ticket cost display
   const qty = clampInt(document.getElementById('ticketCount').value, 1, CONFIG.MAX_TICKETS);
   document.getElementById('totalCost').textContent =
-    (qty * CONFIG.TICKET_PRICE).toFixed(4) + ' XRS';
+    (qty * CONFIG.TICKET_PRICE).toFixed(2) + ' XRS';
 }
 
 // ══════════════════════════════════════════════
@@ -1526,8 +2652,10 @@ function updateCountdown() {
   document.getElementById('cdM').textContent = String(m).padStart(2,'0');
   document.getElementById('cdS').textContent = String(s).padStart(2,'0');
 
-  if (remaining === 0 && totalTickets() > 0) {
+  if (remaining === 0 && totalTickets() > 0 && !isDrawing) {
+    isDrawing = true;
     runDraw();
+    isDrawing = false;
   }
 }
 
@@ -1560,28 +2688,56 @@ document.addEventListener('keydown', e => {
 // ══════════════════════════════════════════════
 //  EVENT LISTENERS
 // ══════════════════════════════════════════════
+
+// Header connect/disconnect button
 document.getElementById('connectBtn').addEventListener('click', () => {
-  if (state.wallet) {
-    onWalletDisconnected();
-  } else {
-    openModal('connectModal');
-  }
+  if (state.wallet) onWalletDisconnected();
+  else openModal('connectModal');
 });
 
+// Connect modal
 document.getElementById('connectModalClose').addEventListener('click', () => closeModal('connectModal'));
+
+// Win modal
 document.getElementById('winModalClose').addEventListener('click', () => closeModal('winModal'));
 
+// Xeris injected wallet (visible only when inside Xeris browser)
+document.getElementById('xerisInjectedBtn').addEventListener('click', connectXerisInjected);
+
+// Paste address
+document.getElementById('pasteAddrBtn').addEventListener('click', openPasteModal);
+document.getElementById('pasteModalClose').addEventListener('click', () => closeModal('pasteModal'));
+document.getElementById('pasteAddrBack').addEventListener('click', () => {
+  closeModal('pasteModal');
+  openModal('connectModal');
+});
+document.getElementById('pasteAddrConfirm').addEventListener('click', confirmPasteAddress);
+document.getElementById('pasteAddrInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') confirmPasteAddress();
+});
+document.getElementById('pasteAddrInput').addEventListener('focus', function() {
+  this.style.borderColor = 'var(--accent)';
+});
+document.getElementById('pasteAddrInput').addEventListener('blur', function() {
+  this.style.borderColor = 'var(--border)';
+});
+
+// WalletConnect
 document.getElementById('wcBtn').addEventListener('click', connectWalletConnect);
+
+// Demo wallet
 document.getElementById('demoBtn').addEventListener('click', () => {
   closeModal('connectModal');
   connectDemoWallet();
 });
 
+// Buy tickets
 document.getElementById('buyBtn').addEventListener('click', handleBuy);
 
+// Quantity controls
 document.getElementById('qtyMinus').addEventListener('click', () => {
   const inp = document.getElementById('ticketCount');
-  inp.value = clampInt(inp.value - 1, 1, CONFIG.MAX_TICKETS);
+  inp.value = clampInt(parseInt(inp.value, 10) - 1, 1, CONFIG.MAX_TICKETS);
   updateStats();
 });
 document.getElementById('qtyPlus').addEventListener('click', () => {
@@ -1589,7 +2745,7 @@ document.getElementById('qtyPlus').addEventListener('click', () => {
   inp.value = clampInt(parseInt(inp.value, 10) + 1, 1, CONFIG.MAX_TICKETS);
   updateStats();
 });
-document.getElementById('ticketCount').addEventListener('input', () => updateStats());
+document.getElementById('ticketCount').addEventListener('input', updateStats);
 
 // ══════════════════════════════════════════════
 //  NETWORK STATS POLLING
@@ -1599,17 +2755,17 @@ async function pollNetworkStats() {
     const stats = await fetchNetworkStats();
     if (!stats) return;
 
-    const bh  = stats.blockHeight || stats.block_height || stats.blocks || null;
-    const tps = stats.tps || stats.currentTps || null;
-    const validators = stats.validators || stats.validatorCount || null;
-    const txCount = stats.totalTransactions || stats.transactions || null;
+    const bh         = parseBlockHeight(stats);
+    const tps        = parseTps(stats);
+    const validators = parseValidators(stats);
+    const txCount    = parseTxCount(stats);
 
     // Update ticker spans with live data
     const spans = document.querySelectorAll('#tickerInner span');
-    if (bh        && spans[0]) spans[0].textContent = `◈ BLOCK HEIGHT: ${Number(bh).toLocaleString()}`;
-    if (tps       && spans[4]) spans[4].textContent = `⬡ LIVE TPS: ${tps}`;
+    if (bh         && spans[0]) spans[0].textContent = `◈ BLOCK HEIGHT: ${Number(bh).toLocaleString()}`;
+    if (tps        && spans[4]) spans[4].textContent = `⬡ LIVE TPS: ${tps}`;
     if (validators && spans[6]) spans[6].textContent = `◈ VALIDATORS: ${validators}`;
-    if (txCount   && spans[8]) spans[8].textContent = `⬡ TOTAL TXS: ${Number(txCount).toLocaleString()}`;
+    if (txCount    && spans[8]) spans[8].textContent = `⬡ TOTAL TXS: ${Number(txCount).toLocaleString()}`;
   } catch {}
 
   // Also verify node health and show indicator
@@ -1622,6 +2778,8 @@ async function pollNetworkStats() {
       pill.style.color = '#c8ff00';
     } else {
       pill.textContent = '⬡ XERIS TESTNET ○';
+      pill.style.borderColor = '';
+      pill.style.color = '';
     }
   } catch {}
 }
@@ -1630,15 +2788,17 @@ async function pollNetworkStats() {
 //  INIT
 // ══════════════════════════════════════════════
 function init() {
+  // Load persisted usernames first
+  loadUsernames();
+
   // Restore persistent round state from localStorage
   try {
-    const saved = localStorage.getItem('solprize_v1');
+    const saved = localStorage.getItem('xerisfun_v1');
     if (saved) {
       const s = JSON.parse(saved);
       if (s.round)       state.round = s.round;
       if (s.drawTarget)  state.drawTarget = s.drawTarget;
       if (s.winners)     state.winners = s.winners;
-      // Don't restore players — each session starts fresh for testnet
     }
   } catch {}
 
@@ -1647,9 +2807,12 @@ function init() {
     state.drawTarget = Date.now() + CONFIG.DRAW_INTERVAL * 1000;
   }
 
-  // Show treasury in faucet tip
-  document.getElementById('faucetLink').title =
-    `Treasury: ${CONFIG.TREASURY}`;
+  // Show treasury in faucet badge tooltip
+  const faucetAmtBadge = document.getElementById('faucetAmountBadge');
+  if (faucetAmtBadge) faucetAmtBadge.title = `Treasury: ${CONFIG.TREASURY}`;
+
+  // Detect Xeris wallet browser and configure connect modal
+  initWalletUI();
 
   updateStats();
   updateCountdown();
@@ -1664,7 +2827,7 @@ function init() {
   // Persist state every 10s
   setInterval(() => {
     try {
-      localStorage.setItem('solprize_v1', JSON.stringify({
+      localStorage.setItem('xerisfun_v1', JSON.stringify({
         round:      state.round,
         drawTarget: state.drawTarget,
         winners:    state.winners.slice(0, 20),
