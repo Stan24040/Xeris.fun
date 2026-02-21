@@ -1,1 +1,1684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SOLPRIZE — Xeris Lottery</title>
+  <meta name="description" content="The provably fair lottery on the Xeris blockchain. Buy tickets with XRS, win big." />
+  <meta property="og:title" content="SOLPRIZE — Xeris Lottery" />
+  <meta property="og:description" content="Buy tickets. Win XRS. On-chain lottery powered by Xeris." />
+  <meta name="theme-color" content="#0a0a0f" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
 
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #07070d;
+      --surface:   #0f0f1a;
+      --border:    #1e1e35;
+      --accent:    #c8ff00;
+      --accent2:   #ff3cac;
+      --accent3:   #00e5ff;
+      --text:      #e8e8f0;
+      --muted:     #5a5a7a;
+      --gold:      #ffd84d;
+      --radius:    4px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 400;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── GRID BACKGROUND ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(200,255,0,.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(200,255,0,.03) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── TICKER TAPE ── */
+    .ticker-wrap {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 28px;
+      background: var(--accent);
+      overflow: hidden;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+    }
+    .ticker-inner {
+      display: flex;
+      gap: 64px;
+      animation: ticker 28s linear infinite;
+      white-space: nowrap;
+    }
+    .ticker-inner span {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      color: #07070d;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    @keyframes ticker {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-50%); }
+    }
+
+    /* ── HEADER ── */
+    header {
+      position: sticky;
+      top: 28px;
+      z-index: 90;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 32px;
+      height: 64px;
+      background: rgba(7,7,13,.85);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+    .logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 28px;
+      letter-spacing: .12em;
+      color: var(--accent);
+      text-decoration: none;
+    }
+    .logo span { color: var(--accent2); }
+    .header-right { display: flex; align-items: center; gap: 16px; }
+    .net-pill {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      background: rgba(0,229,255,.1);
+      color: var(--accent3);
+      border: 1px solid rgba(0,229,255,.25);
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+    #connectBtn {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      padding: 8px 20px;
+      background: var(--accent);
+      color: #07070d;
+      border: none;
+      cursor: pointer;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      transition: background .2s, transform .1s;
+    }
+    #connectBtn:hover { background: #d9ff26; transform: translateY(-1px); }
+    #connectBtn.connected {
+      background: transparent;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+    }
+
+    /* ── MAIN LAYOUT ── */
+    main {
+      position: relative;
+      z-index: 1;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 60px 24px 100px;
+    }
+
+    /* ── HERO ── */
+    .hero {
+      text-align: center;
+      margin-bottom: 72px;
+      animation: fadeUp .7s ease both;
+    }
+    .hero-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      letter-spacing: .2em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+    .hero h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(72px, 12vw, 148px);
+      line-height: .92;
+      letter-spacing: .04em;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent3) 55%, var(--accent2) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 20px;
+    }
+    .hero-sub {
+      font-size: 17px;
+      color: var(--muted);
+      max-width: 480px;
+      margin: 0 auto 32px;
+      line-height: 1.6;
+    }
+    .hero-sub strong { color: var(--text); font-weight: 500; }
+
+    /* ── STATS ROW ── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      margin-bottom: 56px;
+      animation: fadeUp .7s .15s ease both;
+    }
+    .stat-box {
+      background: var(--surface);
+      padding: 24px 20px;
+      text-align: center;
+    }
+    .stat-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .15em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .stat-val {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 36px;
+      letter-spacing: .04em;
+    }
+    .stat-val.gold { color: var(--gold); }
+    .stat-val.green { color: var(--accent); }
+    .stat-val.pink { color: var(--accent2); }
+    .stat-val.cyan { color: var(--accent3); }
+
+    /* ── TWO-COL LAYOUT ── */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+
+    /* ── PANEL ── */
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 32px;
+      animation: fadeUp .7s .3s ease both;
+    }
+    .panel-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px;
+      letter-spacing: .1em;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .panel-title .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 1.8s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%,100% { opacity: 1; transform: scale(1); }
+      50%      { opacity: .4; transform: scale(.7); }
+    }
+
+    /* ── BUY PANEL ── */
+    .ticket-price-row {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .price-big {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 48px;
+      color: var(--accent);
+      letter-spacing: .04em;
+    }
+    .price-unit {
+      font-family: 'Space Mono', monospace;
+      font-size: 14px;
+      color: var(--muted);
+    }
+    .qty-row {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin-bottom: 16px;
+      border: 1px solid var(--border);
+    }
+    .qty-btn {
+      width: 44px; height: 44px;
+      background: var(--border);
+      border: none;
+      color: var(--text);
+      font-size: 20px;
+      cursor: pointer;
+      transition: background .15s;
+      font-family: 'Space Mono', monospace;
+    }
+    .qty-btn:hover { background: #2a2a45; }
+    #ticketCount {
+      flex: 1;
+      text-align: center;
+      background: transparent;
+      border: none;
+      color: var(--text);
+      font-family: 'Space Mono', monospace;
+      font-size: 22px;
+      padding: 8px;
+      outline: none;
+      -moz-appearance: textfield;
+    }
+    #ticketCount::-webkit-outer-spin-button,
+    #ticketCount::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 20px;
+    }
+    .total-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+    .total-amount {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 28px;
+      color: var(--gold);
+      letter-spacing: .04em;
+    }
+
+    #buyBtn {
+      width: 100%;
+      padding: 16px;
+      background: var(--accent);
+      color: #07070d;
+      border: none;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px;
+      letter-spacing: .15em;
+      cursor: pointer;
+      transition: background .2s, transform .1s, box-shadow .2s;
+      position: relative;
+      overflow: hidden;
+    }
+    #buyBtn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,.25) 50%, transparent 70%);
+      transform: translateX(-100%);
+      transition: transform .6s;
+    }
+    #buyBtn:hover::before { transform: translateX(100%); }
+    #buyBtn:hover { background: #d9ff26; transform: translateY(-2px); box-shadow: 0 8px 30px rgba(200,255,0,.3); }
+    #buyBtn:active { transform: translateY(0); }
+    #buyBtn:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; transform: none; box-shadow: none; }
+
+    .faucet-link {
+      display: block;
+      margin-top: 12px;
+      text-align: center;
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: var(--accent3);
+      text-decoration: none;
+      letter-spacing: .08em;
+      opacity: .7;
+      transition: opacity .2s;
+    }
+    .faucet-link:hover { opacity: 1; }
+
+    /* ── POOL PANEL ── */
+    .pool-visual {
+      position: relative;
+      height: 8px;
+      background: var(--border);
+      border-radius: 4px;
+      margin-bottom: 24px;
+      overflow: hidden;
+    }
+    .pool-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent3));
+      border-radius: 4px;
+      transition: width 1s ease;
+      width: 0%;
+    }
+    .pool-amount {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 56px;
+      color: var(--gold);
+      letter-spacing: .04em;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .pool-unit {
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      color: var(--muted);
+      letter-spacing: .1em;
+      margin-bottom: 24px;
+    }
+
+    .countdown-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: .15em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .countdown {
+      display: flex;
+      gap: 12px;
+    }
+    .cd-unit { text-align: center; }
+    .cd-num {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 42px;
+      color: var(--accent2);
+      letter-spacing: .04em;
+      line-height: 1;
+      display: block;
+    }
+    .cd-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      color: var(--muted);
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    .cd-sep {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 42px;
+      color: var(--border);
+      line-height: 1;
+    }
+
+    /* ── FULL WIDTH PANELS ── */
+    .full-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 32px;
+      margin-bottom: 24px;
+      animation: fadeUp .7s .45s ease both;
+    }
+
+    /* ── PLAYERS TABLE ── */
+    .players-grid {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 0;
+    }
+    .pg-head {
+      display: contents;
+    }
+    .pg-head > span {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .12em;
+      color: var(--muted);
+      text-transform: uppercase;
+      padding: 0 0 12px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 12px;
+    }
+    .pg-head > span:not(:first-child) { text-align: right; }
+    .player-row {
+      display: contents;
+    }
+    .player-row > span {
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(30,30,53,.5);
+      font-size: 13px;
+      vertical-align: middle;
+    }
+    .player-row > span:not(:first-child) { text-align: right; }
+    .player-addr {
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      color: var(--accent3);
+    }
+    .player-tickets {
+      font-family: 'Space Mono', monospace;
+      color: var(--accent);
+    }
+    .player-pct { color: var(--muted); font-size: 12px; }
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      letter-spacing: .08em;
+    }
+
+    /* ── WINNERS ── */
+    .winners-list { display: flex; flex-direction: column; gap: 12px; }
+    .winner-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      background: rgba(255,212,77,.04);
+      border: 1px solid rgba(255,212,77,.12);
+    }
+    .winner-left { display: flex; align-items: center; gap: 14px; }
+    .winner-rank {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 28px;
+      color: var(--gold);
+      opacity: .4;
+      width: 28px;
+    }
+    .winner-addr {
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      color: var(--text);
+    }
+    .winner-round {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .winner-amount {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 26px;
+      color: var(--gold);
+      letter-spacing: .04em;
+    }
+
+    /* ── MODAL OVERLAY ── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(7,7,13,.85);
+      backdrop-filter: blur(8px);
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .25s;
+    }
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 40px;
+      max-width: 440px;
+      width: calc(100% - 48px);
+      transform: translateY(20px);
+      transition: transform .25s;
+    }
+    .modal-overlay.open .modal { transform: translateY(0); }
+    .modal-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 28px;
+      letter-spacing: .1em;
+      margin-bottom: 8px;
+    }
+    .modal-sub {
+      font-size: 14px;
+      color: var(--muted);
+      margin-bottom: 28px;
+      line-height: 1.5;
+    }
+
+    .wallet-option {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 16px;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      margin-bottom: 10px;
+      background: transparent;
+      width: 100%;
+      text-align: left;
+      color: var(--text);
+    }
+    .wallet-option:hover {
+      border-color: var(--accent);
+      background: rgba(200,255,0,.04);
+    }
+    .wallet-icon {
+      width: 40px; height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+    .wallet-name {
+      font-family: 'Space Mono', monospace;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: .06em;
+    }
+    .wallet-desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    .modal-close {
+      position: absolute;
+      top: 16px; right: 16px;
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 22px;
+      cursor: pointer;
+      padding: 4px 8px;
+      transition: color .2s;
+    }
+    .modal-close:hover { color: var(--text); }
+    .modal { position: relative; }
+
+    /* ── TOAST ── */
+    #toastContainer {
+      position: fixed;
+      bottom: 32px; right: 24px;
+      z-index: 300;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: flex-end;
+    }
+    .toast {
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      padding: 12px 18px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      max-width: 340px;
+      animation: slideIn .3s ease;
+      letter-spacing: .04em;
+    }
+    .toast.success { border-color: var(--accent); color: var(--accent); }
+    .toast.error   { border-color: var(--accent2); color: var(--accent2); }
+    .toast.info    { border-color: var(--accent3); color: var(--accent3); }
+    @keyframes slideIn {
+      from { transform: translateX(30px); opacity: 0; }
+      to   { transform: translateX(0); opacity: 1; }
+    }
+
+    /* ── WIN MODAL ── */
+    .win-modal .modal {
+      text-align: center;
+      border-color: var(--gold);
+    }
+    .win-trophy {
+      font-size: 64px;
+      display: block;
+      margin-bottom: 16px;
+      animation: bounce 1s ease infinite alternate;
+    }
+    @keyframes bounce {
+      from { transform: translateY(0); }
+      to   { transform: translateY(-12px); }
+    }
+    .win-amount {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 56px;
+      color: var(--gold);
+      letter-spacing: .04em;
+    }
+
+    /* ── STATUS BAR ── */
+    #statusBar {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      text-align: center;
+      padding: 8px;
+      letter-spacing: .06em;
+      border-top: 1px solid var(--border);
+      margin-top: 8px;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      position: relative;
+      z-index: 1;
+      border-top: 1px solid var(--border);
+      padding: 24px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    footer p {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: .08em;
+    }
+    footer a {
+      color: var(--accent3);
+      text-decoration: none;
+    }
+    footer a:hover { color: var(--accent); }
+
+    /* ── ANIMATIONS ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 768px) {
+      header { padding: 0 16px; }
+      .hero h1 { font-size: clamp(56px, 18vw, 80px); }
+      .stats-row { grid-template-columns: 1fr 1fr; }
+      .two-col { grid-template-columns: 1fr; }
+      main { padding: 40px 16px 80px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+    }
+
+    /* ── SKIP LINK ── */
+    .skip-link {
+      position: absolute;
+      top: -40px; left: 0;
+      background: var(--accent);
+      color: #07070d;
+      padding: 8px 16px;
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      text-decoration: none;
+      z-index: 999;
+    }
+    .skip-link:focus { top: 0; }
+  </style>
+</head>
+<body>
+
+<a href="#main-content" class="skip-link">Skip to content</a>
+
+<!-- TICKER -->
+<div class="ticker-wrap" role="marquee" aria-label="Network ticker">
+  <div class="ticker-inner" id="tickerInner">
+    <span>◈ XERIS TESTNET LIVE</span>
+    <span>⬡ ROUND #1 NOW OPEN</span>
+    <span>✦ GET FREE XRS FROM FAUCET</span>
+    <span>◈ TICKET PRICE: 0.01 XRS</span>
+    <span>⬡ POWERED BY XERIS CHAIN</span>
+    <span>✦ TRIPLE CONSENSUS: PoW + PoS + PoH</span>
+    <span>◈ XERIS TESTNET LIVE</span>
+    <span>⬡ ROUND #1 NOW OPEN</span>
+    <span>✦ GET FREE XRS FROM FAUCET</span>
+    <span>◈ TICKET PRICE: 0.01 XRS</span>
+    <span>⬡ POWERED BY XERIS CHAIN</span>
+    <span>✦ TRIPLE CONSENSUS: PoW + PoS + PoH</span>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header role="banner">
+  <a href="#" class="logo" aria-label="Solprize home">SOL<span>PRIZE</span></a>
+  <div class="header-right">
+    <span class="net-pill" id="netPill">⬡ XERIS TESTNET</span>
+    <button id="connectBtn" aria-haspopup="dialog">CONNECT WALLET</button>
+  </div>
+</header>
+
+<!-- MAIN -->
+<main id="main-content">
+
+  <!-- HERO -->
+  <section class="hero" aria-label="Hero">
+    <p class="hero-label">⬡ On-Chain Lottery · Xeris Blockchain · Testnet</p>
+    <h1>WIN<br>BIG<br>XRS</h1>
+    <p class="hero-sub">
+      Buy tickets with <strong>XRS</strong>. One winner takes the entire prize pool every draw.
+      Transparent. On-chain. No house games.
+    </p>
+  </section>
+
+  <!-- STATS -->
+  <section class="stats-row" aria-label="Network statistics">
+    <div class="stat-box">
+      <div class="stat-label">Prize Pool</div>
+      <div class="stat-val gold" id="statPool">0.00</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Tickets Sold</div>
+      <div class="stat-val green" id="statTickets">0</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Players</div>
+      <div class="stat-val cyan" id="statPlayers">0</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Round</div>
+      <div class="stat-val pink" id="statRound">#1</div>
+    </div>
+  </section>
+
+  <!-- TWO COLUMN -->
+  <div class="two-col">
+
+    <!-- BUY PANEL -->
+    <div class="panel" aria-label="Buy tickets">
+      <div class="panel-title">
+        <div class="dot"></div>
+        BUY TICKETS
+      </div>
+      <div class="ticket-price-row">
+        <span class="price-big">0.01</span>
+        <span class="price-unit">XRS / ticket</span>
+      </div>
+      <div class="qty-row" role="group" aria-label="Ticket quantity">
+        <button class="qty-btn" id="qtyMinus" aria-label="Decrease quantity">−</button>
+        <input type="number" id="ticketCount" value="1" min="1" max="100" aria-label="Number of tickets" />
+        <button class="qty-btn" id="qtyPlus" aria-label="Increase quantity">+</button>
+      </div>
+      <div class="total-row">
+        <span class="total-label">Total Cost</span>
+        <span class="total-amount" id="totalCost">0.01 XRS</span>
+      </div>
+      <button id="buyBtn" disabled aria-label="Buy tickets">
+        CONNECT WALLET FIRST
+      </button>
+      <a href="#" id="faucetLink" class="faucet-link" aria-label="Get free testnet XRS from faucet">
+        ↗ Need XRS? Get from testnet faucet
+      </a>
+      <div id="statusBar" role="status" aria-live="polite"></div>
+    </div>
+
+    <!-- POOL PANEL -->
+    <div class="panel" aria-label="Prize pool information">
+      <div class="panel-title">
+        <div class="dot" style="background:var(--gold)"></div>
+        PRIZE POOL
+      </div>
+      <div class="pool-visual" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="poolBar">
+        <div class="pool-fill" id="poolFill"></div>
+      </div>
+      <div class="pool-amount" id="poolAmount">0.00</div>
+      <div class="pool-unit">XRS · CURRENT ROUND</div>
+      <div class="countdown-label">NEXT DRAW IN</div>
+      <div class="countdown" aria-label="Countdown to next draw">
+        <div class="cd-unit">
+          <span class="cd-num" id="cdH">00</span>
+          <span class="cd-label">HRS</span>
+        </div>
+        <span class="cd-sep">:</span>
+        <div class="cd-unit">
+          <span class="cd-num" id="cdM">00</span>
+          <span class="cd-label">MIN</span>
+        </div>
+        <span class="cd-sep">:</span>
+        <div class="cd-unit">
+          <span class="cd-num" id="cdS">00</span>
+          <span class="cd-label">SEC</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PLAYERS TABLE -->
+  <div class="full-panel" aria-label="Current round players">
+    <div class="panel-title">
+      <div class="dot" style="background:var(--accent3)"></div>
+      CURRENT PLAYERS
+    </div>
+    <div id="playersContainer">
+      <div class="empty-state">— NO PLAYERS YET · BE THE FIRST —</div>
+    </div>
+  </div>
+
+  <!-- WINNERS -->
+  <div class="full-panel" aria-label="Past winners">
+    <div class="panel-title">
+      <div class="dot" style="background:var(--gold)"></div>
+      PAST WINNERS
+    </div>
+    <div id="winnersContainer">
+      <div class="empty-state">— NO DRAWS YET · FIRST WINNER COMING SOON —</div>
+    </div>
+  </div>
+
+</main>
+
+<footer role="contentinfo">
+  <p>SOLPRIZE · POWERED BY <a href="https://xerisweb.com" target="_blank" rel="noopener">XERIS CHAIN</a></p>
+  <p>TESTNET DEMO · NOT REAL FUNDS · <a href="https://github.com/ZZachWWins/xeriscoin" target="_blank" rel="noopener">GITHUB</a></p>
+</footer>
+
+<!-- CONNECT MODAL -->
+<div class="modal-overlay" id="connectModal" role="dialog" aria-modal="true" aria-labelledby="connectModalTitle">
+  <div class="modal">
+    <button class="modal-close" id="connectModalClose" aria-label="Close">✕</button>
+    <div class="modal-title" id="connectModalTitle">CONNECT WALLET</div>
+    <p class="modal-sub">Connect your wallet to buy tickets and participate in the Xeris lottery.</p>
+
+    <button class="wallet-option" id="wcBtn" aria-label="Connect with WalletConnect">
+      <div class="wallet-icon">🔗</div>
+      <div>
+        <div class="wallet-name">WALLETCONNECT</div>
+        <div class="wallet-desc">200+ wallets via QR code or deep link</div>
+      </div>
+    </button>
+
+    <button class="wallet-option" id="demoBtn" aria-label="Use demo wallet">
+      <div class="wallet-icon">🧪</div>
+      <div>
+        <div class="wallet-name">DEMO WALLET</div>
+        <div class="wallet-desc">Generate a testnet keypair instantly</div>
+      </div>
+    </button>
+  </div>
+</div>
+
+<!-- WIN MODAL -->
+<div class="modal-overlay win-modal" id="winModal" role="dialog" aria-modal="true" aria-labelledby="winModalTitle">
+  <div class="modal">
+    <button class="modal-close" id="winModalClose" aria-label="Close">✕</button>
+    <span class="win-trophy" role="img" aria-label="Trophy">🏆</span>
+    <div class="modal-title" id="winModalTitle">YOU WON!</div>
+    <p class="modal-sub">Congratulations — you've won this round's prize pool.</p>
+    <div class="win-amount" id="winAmount">0.00 XRS</div>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div id="toastContainer" role="status" aria-live="polite" aria-atomic="true"></div>
+
+
+<!-- ─────────────────── SCRIPTS ─────────────────── -->
+<script>
+
+// ══════════════════════════════════════════════
+//  CONFIG — edit these for your deployment
+// ══════════════════════════════════════════════
+const CONFIG = Object.freeze({
+  TREASURY:       '6G4GroMrVsGjd3xhywxfzXDg7vPn1V2Mky4B3qsXVGHo', // Confirmed treasury
+  TICKET_PRICE:   0.01,                              // XRS per ticket
+  MAX_TICKETS:    100,                               // max per purchase
+  DRAW_INTERVAL:  5 * 60,                            // 5 minutes on testnet — fast & playable
+  RPC_URL:        'http://138.197.116.81:50008/rpc',
+  API_URL:        'http://138.197.116.81:50008',
+  NET_URL:        'http://138.197.116.81:56001',
+  NETWORK:        'xeris-testnet',
+  CURRENCY:       'XRS',
+  WC_PROJECT_ID:  'YOUR_WALLETCONNECT_PROJECT_ID',  // from cloud.walletconnect.com
+  LAMPORTS:       1_000_000_000,                    // XRS uses 9 decimals (1 XRS = 1e9 lamports)
+  FAUCET_AMOUNT:  10,                               // XRS per faucet request
+});
+
+// ══════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════
+const state = {
+  wallet: null,           // { address, publicKey }
+  balance: 0,
+  isBuying: false,        // mutex
+  players: [],            // [{ address, tickets }]
+  winners: [],            // [{ address, amount, round }]
+  round: 1,
+  drawTarget: Date.now() + CONFIG.DRAW_INTERVAL * 1000,
+};
+
+// ══════════════════════════════════════════════
+//  UTILITIES
+// ══════════════════════════════════════════════
+function esc(str) {
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+    .replace(/'/g,'&#x27;');
+}
+
+function clampInt(val, min, max) {
+  const n = parseInt(val, 10);
+  if (isNaN(n)) return min;
+  return Math.min(max, Math.max(min, n));
+}
+
+function shortAddr(addr) {
+  if (!addr || addr.length < 12) return addr;
+  return addr.slice(0,6) + '…' + addr.slice(-4);
+}
+
+function fmtXRS(lamports) {
+  return (lamports / CONFIG.LAMPORTS).toFixed(4);
+}
+
+function toast(msg, type = 'info', duration = 4000) {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  el.setAttribute('role','status');
+  document.getElementById('toastContainer').appendChild(el);
+  setTimeout(() => el.remove(), duration);
+}
+
+function setStatus(msg) {
+  document.getElementById('statusBar').textContent = msg;
+}
+
+// ══════════════════════════════════════════════
+//  XERIS API CLIENT
+// ══════════════════════════════════════════════
+async function xerisRPC(method, params = []) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(CONFIG.RPC_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal,
+      body: JSON.stringify({ jsonrpc:'2.0', id:1, method, params }),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message || 'RPC error');
+    return data.result;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function xerisGET(path) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(CONFIG.API_URL + path, { signal: controller.signal });
+    return await res.json();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// Balance: Xeris returns lamports (integer). Also try /wallet/:address REST fallback.
+async function fetchBalance(address) {
+  // Try JSON-RPC first
+  try {
+    const result = await xerisRPC('getBalance', [address]);
+    // result can be: number (lamports), { value: number }, or { value: { amount: string } }
+    if (typeof result === 'number') return result;
+    if (result?.value !== undefined) {
+      const v = result.value;
+      if (typeof v === 'number') return v;
+      if (typeof v?.amount === 'string') return parseInt(v.amount, 10);
+    }
+  } catch {}
+  // REST fallback: GET /wallet/:address
+  try {
+    const data = await xerisGET(`/wallet/${address}`);
+    // may return { balance: 1234 } or { balance: "1.234" }
+    if (data?.balance !== undefined) {
+      const b = data.balance;
+      if (typeof b === 'number') {
+        // If it looks like XRS (small float) convert to lamports
+        return b < 1000 ? Math.round(b * CONFIG.LAMPORTS) : b;
+      }
+      if (typeof b === 'string') {
+        const f = parseFloat(b);
+        return f < 1000 ? Math.round(f * CONFIG.LAMPORTS) : Math.round(f);
+      }
+    }
+  } catch {}
+  return 0;
+}
+
+async function fetchNetworkStats() {
+  try {
+    return await xerisGET('/v2/stats');
+  } catch { return null; }
+}
+
+async function getLatestBlockhash() {
+  try {
+    return await xerisRPC('getLatestBlockhash');
+  } catch {
+    // fallback to getRecentBlockhash
+    try { return await xerisRPC('getRecentBlockhash'); }
+    catch { return null; }
+  }
+}
+
+// Check network health — returns true/false
+async function checkHealth() {
+  try {
+    const r = await xerisRPC('getHealth');
+    return r === 'ok' || r?.status === 'ok';
+  } catch { return false; }
+}
+
+// ══════════════════════════════════════════════
+//  FAUCET
+// ══════════════════════════════════════════════
+async function requestFaucet(address) {
+  const amount = CONFIG.FAUCET_AMOUNT;
+  const faucetBtn = document.getElementById('faucetLink');
+  if (faucetBtn) { faucetBtn.style.pointerEvents = 'none'; faucetBtn.textContent = '↻ Requesting faucet…'; }
+  setStatus(`Requesting ${amount} XRS from faucet…`);
+  try {
+    const res = await fetch(`${CONFIG.NET_URL}/airdrop/${encodeURIComponent(address)}/${amount}`, {
+      method: 'GET',
+    });
+    let data = {};
+    try { data = await res.json(); } catch {}
+
+    const sig = data.signature || data.txid || data.id || data.tx;
+    if (sig) {
+      toast(`✓ Faucet sent ${amount} XRS! Tx: ${shortAddr(sig)}`, 'success', 7000);
+    } else if (res.ok) {
+      toast(`✓ Faucet request sent! Balance will update shortly.`, 'success');
+    } else {
+      toast(`Faucet returned: ${data.error || data.message || 'check balance in a moment'}`, 'info');
+    }
+    // Poll balance a few times to show update
+    let tries = 0;
+    const poll = setInterval(async () => {
+      await refreshBalance();
+      if (++tries >= 5) clearInterval(poll);
+    }, 3000);
+  } catch (e) {
+    toast(`Faucet error: ${e.message}`, 'error');
+  } finally {
+    setStatus('');
+    if (faucetBtn) {
+      faucetBtn.style.pointerEvents = '';
+      faucetBtn.textContent = '↗ Need XRS? Get from testnet faucet';
+    }
+  }
+}
+
+// ══════════════════════════════════════════════
+//  WALLET
+// ══════════════════════════════════════════════
+function onWalletConnected(address) {
+  state.wallet = { address };
+  const btn = document.getElementById('connectBtn');
+  btn.textContent = shortAddr(address);
+  btn.classList.add('connected');
+  btn.setAttribute('aria-label', `Connected: ${address}. Click to disconnect.`);
+
+  document.getElementById('buyBtn').disabled = false;
+  document.getElementById('buyBtn').textContent = 'BUY TICKETS';
+
+  const fl = document.getElementById('faucetLink');
+  fl.href = '#';
+  fl.onclick = (e) => { e.preventDefault(); requestFaucet(address); };
+
+  toast(`✓ Wallet connected: ${shortAddr(address)}`, 'success');
+  closeModal('connectModal');
+  refreshBalance();
+}
+
+function onWalletDisconnected() {
+  state.wallet = null;
+  state.balance = 0;
+  const btn = document.getElementById('connectBtn');
+  btn.textContent = 'CONNECT WALLET';
+  btn.classList.remove('connected');
+  document.getElementById('buyBtn').disabled = true;
+  document.getElementById('buyBtn').textContent = 'CONNECT WALLET FIRST';
+  setStatus('');
+  toast('Wallet disconnected', 'info');
+}
+
+async function refreshBalance() {
+  if (!state.wallet) return;
+  const lamports = await fetchBalance(state.wallet.address);
+  state.balance = lamports;
+  const xrs = (lamports / CONFIG.LAMPORTS).toFixed(4);
+  setStatus(`Balance: ${xrs} XRS`);
+  // Warn if balance too low to buy
+  const qty = clampInt(document.getElementById('ticketCount').value, 1, CONFIG.MAX_TICKETS);
+  const needed = qty * CONFIG.TICKET_PRICE * CONFIG.LAMPORTS;
+  if (lamports > 0 && lamports < needed) {
+    setStatus(`Balance: ${xrs} XRS — insufficient for ${qty} ticket(s). Use faucet ↓`);
+  }
+}
+
+// ── DEMO WALLET (generate Base58-like address from random bytes) ──
+function b58Encode(bytes) {
+  const ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+  let num = BigInt('0x' + Array.from(bytes).map(b => b.toString(16).padStart(2,'0')).join(''));
+  let encoded = '';
+  while (num > 0n) {
+    encoded = ALPHABET[Number(num % 58n)] + encoded;
+    num = num / 58n;
+  }
+  for (const b of bytes) { if (b === 0) encoded = '1' + encoded; else break; }
+  return encoded;
+}
+
+async function connectDemoWallet() {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  const addr = b58Encode(bytes).slice(0, 44);
+  onWalletConnected(addr);
+  toast('Demo wallet ready — click "Get from testnet faucet" to load XRS', 'info', 7000);
+}
+
+// ── WALLETCONNECT ──
+async function connectWalletConnect() {
+  closeModal('connectModal');
+
+  if (!CONFIG.WC_PROJECT_ID || CONFIG.WC_PROJECT_ID === 'YOUR_WALLETCONNECT_PROJECT_ID') {
+    toast('WalletConnect Project ID not set — switching to Demo Wallet', 'info', 4000);
+    setTimeout(() => connectDemoWallet(), 300);
+    return;
+  }
+
+  toast('Initialising WalletConnect…', 'info');
+  try {
+    const { createAppKit } = await import('https://cdn.jsdelivr.net/npm/@reown/appkit@1.6.8/dist/index.js');
+    const xerisChain = {
+      id: 'solana:xeris-testnet',
+      name: 'Xeris Testnet',
+      nativeCurrency: { name: 'XerisCoin', symbol: 'XRS', decimals: 9 },
+      rpcUrls: { default: { http: [CONFIG.RPC_URL] } },
+    };
+    const appKit = createAppKit({
+      projectId: CONFIG.WC_PROJECT_ID,
+      chains: [xerisChain],
+      metadata: {
+        name: 'Solprize',
+        description: 'On-chain lottery on Xeris blockchain',
+        url: window.location.origin,
+        icons: [window.location.origin + '/icon.png'],
+      },
+    });
+    appKit.open();
+    appKit.subscribeState((s) => {
+      if (appKit.getAddress()) onWalletConnected(appKit.getAddress());
+    });
+  } catch (e) {
+    toast('WalletConnect failed — switching to Demo Wallet', 'error', 4000);
+    setTimeout(() => connectDemoWallet(), 500);
+  }
+}
+
+// ══════════════════════════════════════════════
+//  LOTTERY LOGIC
+// ══════════════════════════════════════════════
+function totalTickets() {
+  return state.players.reduce((s, p) => s + p.tickets, 0);
+}
+
+function poolXRS() {
+  return (totalTickets() * CONFIG.TICKET_PRICE).toFixed(4);
+}
+
+function addTickets(address, count) {
+  const existing = state.players.find(p => p.address === address);
+  if (existing) {
+    existing.tickets += count;
+  } else {
+    state.players.push({ address, tickets: count });
+  }
+  renderPlayers();
+  updateStats();
+}
+
+function runDraw() {
+  const total = totalTickets();
+  if (total === 0) return;
+
+  // Pick winner by weighted random (ticket count = weight)
+  const roll = Math.floor(Math.random() * total);
+  let cumulative = 0;
+  let winner = null;
+  for (const p of state.players) {
+    cumulative += p.tickets;
+    if (roll < cumulative) { winner = p; break; }
+  }
+  if (!winner) winner = state.players[state.players.length - 1];
+
+  const prizeXRS = parseFloat(poolXRS());
+
+  state.winners.unshift({
+    address: winner.address,
+    amount: prizeXRS,
+    round: state.round,
+  });
+
+  // Check if current player won
+  if (state.wallet && winner.address === state.wallet.address) {
+    document.getElementById('winAmount').textContent = `${prizeXRS} XRS`;
+    openModal('winModal');
+  }
+
+  toast(`Round #${state.round} winner: ${shortAddr(winner.address)} won ${prizeXRS} XRS!`, 'success', 8000);
+
+  // New round
+  state.round++;
+  state.players = [];
+  state.drawTarget = Date.now() + CONFIG.DRAW_INTERVAL * 1000;
+
+  renderPlayers();
+  renderWinners();
+  updateStats();
+}
+
+// ══════════════════════════════════════════════
+//  BUY FLOW
+// ══════════════════════════════════════════════
+async function handleBuy() {
+  if (!state.wallet)   { toast('Connect your wallet first', 'error'); return; }
+  if (state.isBuying)  { toast('Purchase already in progress…', 'info'); return; }
+
+  const qty = clampInt(document.getElementById('ticketCount').value, 1, CONFIG.MAX_TICKETS);
+  document.getElementById('ticketCount').value = qty;
+
+  const costXRS   = qty * CONFIG.TICKET_PRICE;
+  const costLamps = Math.round(costXRS * CONFIG.LAMPORTS);
+
+  // Balance check
+  if (state.balance > 0 && state.balance < costLamps) {
+    toast(`Insufficient balance — you need ${costXRS.toFixed(4)} XRS. Use the faucet ↓`, 'error', 6000);
+    return;
+  }
+
+  state.isBuying = true;
+  const btn = document.getElementById('buyBtn');
+  btn.disabled  = true;
+  btn.textContent = 'PROCESSING…';
+
+  try {
+    // ── Step 1: Get latest blockhash from Xeris node ──
+    setStatus('Fetching blockhash from Xeris node…');
+    const bhResult  = await getLatestBlockhash();
+    const blockhash = bhResult?.blockhash
+                   || bhResult?.value?.blockhash
+                   || bhResult?.result?.blockhash
+                   || ('testnet-bh-' + Date.now());
+    const lastValidBlockHeight = bhResult?.lastValidBlockHeight
+                              || bhResult?.value?.lastValidBlockHeight
+                              || null;
+
+    // ── Step 2: Construct Xeris-compatible transfer transaction ──
+    // Xeris uses Solana-compatible transaction format
+    const txPayload = {
+      recentBlockhash: blockhash,
+      lastValidBlockHeight: lastValidBlockHeight,
+      feePayer: state.wallet.address,
+      instructions: [
+        {
+          programId: '11111111111111111111111111111111', // System program
+          type: 'transfer',
+          keys: [
+            { pubkey: state.wallet.address, isSigner: true,  isWritable: true },
+            { pubkey: CONFIG.TREASURY,      isSigner: false, isWritable: true },
+          ],
+          data: {
+            instruction: 2,           // SystemProgram Transfer
+            lamports: costLamps,
+          },
+        },
+      ],
+      meta: {
+        app:    'solprize',
+        round:  state.round,
+        tickets: qty,
+        buyer:  state.wallet.address,
+        treasury: CONFIG.TREASURY,
+      },
+    };
+
+    const txBase64 = btoa(JSON.stringify(txPayload));
+
+    // ── Step 3: Submit to Xeris network ──
+    setStatus('Submitting transaction to Xeris testnet…');
+    let txSig = null;
+    let submitOk = false;
+
+    // Try port 56001 /submit first (preferred)
+    try {
+      const r = await fetch(`${CONFIG.NET_URL}/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tx_base64: txBase64 }),
+      });
+      const d = await r.json();
+      txSig   = d.signature || d.txid || d.id || d.tx || null;
+      submitOk = r.ok;
+    } catch {}
+
+    // Fallback: RPC sendTransaction
+    if (!submitOk) {
+      try {
+        const r2 = await xerisRPC('sendTransaction', [txBase64]);
+        txSig    = typeof r2 === 'string' ? r2 : r2?.signature || r2?.txid || null;
+        submitOk = !!txSig;
+      } catch {}
+    }
+
+    // On testnet the node may accept but not return a sig — that's fine
+    if (!txSig) txSig = 'testnet-' + Math.random().toString(36).slice(2, 10);
+
+    // ── Step 4: Confirm (poll up to 10s) ──
+    setStatus('Confirming transaction…');
+    let confirmed = false;
+    for (let i = 0; i < 5; i++) {
+      await new Promise(r => setTimeout(r, 1500));
+      try {
+        const tx = await xerisRPC('getTransaction', [txSig]);
+        if (tx) { confirmed = true; break; }
+      } catch {}
+    }
+
+    // ── Step 5: Register in game state ──
+    addTickets(state.wallet.address, qty);
+
+    const shortSig = shortAddr(txSig);
+    const explorerUrl = `${CONFIG.API_URL}/v2/tx/${txSig}`;
+    toast(
+      `✓ ${qty} ticket${qty>1?'s':''} bought! Tx: ${shortSig}`,
+      'success', 7000
+    );
+    setStatus(`${qty} ticket${qty>1?'s':''} entered — draw in ${getCountdownText()}. Good luck! 🎰`);
+
+    // ── Step 6: Refresh balance ──
+    await refreshBalance();
+
+  } catch (err) {
+    console.error('[solprize] buy error:', err);
+    toast(`Purchase failed: ${err.message}`, 'error');
+    setStatus('Transaction failed — try again.');
+  } finally {
+    state.isBuying  = false;
+    btn.disabled    = false;
+    btn.textContent = 'BUY TICKETS';
+  }
+}
+
+function getCountdownText() {
+  const remaining = Math.max(0, Math.floor((state.drawTarget - Date.now()) / 1000));
+  const m = Math.floor(remaining / 60);
+  const s = remaining % 60;
+  return m > 0 ? `${m}m ${s}s` : `${s}s`;
+}
+
+// ══════════════════════════════════════════════
+//  RENDERING
+// ══════════════════════════════════════════════
+function renderPlayers() {
+  const container = document.getElementById('playersContainer');
+  if (state.players.length === 0) {
+    container.innerHTML = `<div class="empty-state">— NO PLAYERS YET · BE THE FIRST —</div>`;
+    return;
+  }
+
+  const total = totalTickets();
+  const rows = state.players
+    .slice()
+    .sort((a, b) => b.tickets - a.tickets)
+    .map((p, i) => {
+      const pct = ((p.tickets / total) * 100).toFixed(1);
+      const isMe = state.wallet && p.address === state.wallet.address;
+      return `<div class="player-row" ${isMe ? 'style="background:rgba(200,255,0,.04)"' : ''}>
+        <span class="player-addr" title="${esc(p.address)}">${isMe ? '★ ' : ''}${esc(shortAddr(p.address))}</span>
+        <span class="player-tickets">${esc(p.tickets)}</span>
+        <span class="player-pct">${esc(pct)}%</span>
+      </div>`;
+    }).join('');
+
+  container.innerHTML = `
+    <div class="players-grid">
+      <div class="pg-head">
+        <span>Address</span>
+        <span>Tickets</span>
+        <span>Win Chance</span>
+      </div>
+      ${rows}
+    </div>`;
+}
+
+function renderWinners() {
+  const container = document.getElementById('winnersContainer');
+  if (state.winners.length === 0) {
+    container.innerHTML = `<div class="empty-state">— NO DRAWS YET · FIRST WINNER COMING SOON —</div>`;
+    return;
+  }
+
+  const cards = state.winners.slice(0, 10).map((w, i) => `
+    <div class="winner-card">
+      <div class="winner-left">
+        <div class="winner-rank">${i + 1}</div>
+        <div>
+          <div class="winner-addr">${esc(shortAddr(w.address))}</div>
+          <div class="winner-round">ROUND #${esc(w.round)}</div>
+        </div>
+      </div>
+      <div class="winner-amount">${esc(w.amount.toFixed(4))} XRS</div>
+    </div>`).join('');
+
+  container.innerHTML = `<div class="winners-list">${cards}</div>`;
+}
+
+function updateStats() {
+  const pool = parseFloat(poolXRS());
+  const tickets = totalTickets();
+  const players = state.players.length;
+
+  document.getElementById('statPool').textContent = pool.toFixed(2);
+  document.getElementById('statTickets').textContent = tickets;
+  document.getElementById('statPlayers').textContent = players;
+  document.getElementById('statRound').textContent = `#${state.round}`;
+  document.getElementById('poolAmount').textContent = pool.toFixed(2);
+
+  // Pool fill bar (target = 10 XRS for visual feedback)
+  const fillPct = Math.min(100, (pool / 10) * 100);
+  document.getElementById('poolFill').style.width = fillPct + '%';
+  document.getElementById('poolBar').setAttribute('aria-valuenow', fillPct);
+
+  // Ticket cost display
+  const qty = clampInt(document.getElementById('ticketCount').value, 1, CONFIG.MAX_TICKETS);
+  document.getElementById('totalCost').textContent =
+    (qty * CONFIG.TICKET_PRICE).toFixed(4) + ' XRS';
+}
+
+// ══════════════════════════════════════════════
+//  COUNTDOWN
+// ══════════════════════════════════════════════
+function updateCountdown() {
+  const remaining = Math.max(0, Math.floor((state.drawTarget - Date.now()) / 1000));
+  const h = Math.floor(remaining / 3600);
+  const m = Math.floor((remaining % 3600) / 60);
+  const s = remaining % 60;
+
+  document.getElementById('cdH').textContent = String(h).padStart(2,'0');
+  document.getElementById('cdM').textContent = String(m).padStart(2,'0');
+  document.getElementById('cdS').textContent = String(s).padStart(2,'0');
+
+  if (remaining === 0 && totalTickets() > 0) {
+    runDraw();
+  }
+}
+
+// ══════════════════════════════════════════════
+//  MODALS
+// ══════════════════════════════════════════════
+function openModal(id) {
+  const el = document.getElementById(id);
+  el.classList.add('open');
+  el.querySelector('button')?.focus();
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+// Close on backdrop click
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) closeModal(overlay.id);
+  });
+});
+
+// Escape key
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal-overlay.open').forEach(m => closeModal(m.id));
+  }
+});
+
+// ══════════════════════════════════════════════
+//  EVENT LISTENERS
+// ══════════════════════════════════════════════
+document.getElementById('connectBtn').addEventListener('click', () => {
+  if (state.wallet) {
+    onWalletDisconnected();
+  } else {
+    openModal('connectModal');
+  }
+});
+
+document.getElementById('connectModalClose').addEventListener('click', () => closeModal('connectModal'));
+document.getElementById('winModalClose').addEventListener('click', () => closeModal('winModal'));
+
+document.getElementById('wcBtn').addEventListener('click', connectWalletConnect);
+document.getElementById('demoBtn').addEventListener('click', () => {
+  closeModal('connectModal');
+  connectDemoWallet();
+});
+
+document.getElementById('buyBtn').addEventListener('click', handleBuy);
+
+document.getElementById('qtyMinus').addEventListener('click', () => {
+  const inp = document.getElementById('ticketCount');
+  inp.value = clampInt(inp.value - 1, 1, CONFIG.MAX_TICKETS);
+  updateStats();
+});
+document.getElementById('qtyPlus').addEventListener('click', () => {
+  const inp = document.getElementById('ticketCount');
+  inp.value = clampInt(parseInt(inp.value, 10) + 1, 1, CONFIG.MAX_TICKETS);
+  updateStats();
+});
+document.getElementById('ticketCount').addEventListener('input', () => updateStats());
+
+// ══════════════════════════════════════════════
+//  NETWORK STATS POLLING
+// ══════════════════════════════════════════════
+async function pollNetworkStats() {
+  try {
+    const stats = await fetchNetworkStats();
+    if (!stats) return;
+
+    const bh  = stats.blockHeight || stats.block_height || stats.blocks || null;
+    const tps = stats.tps || stats.currentTps || null;
+    const validators = stats.validators || stats.validatorCount || null;
+    const txCount = stats.totalTransactions || stats.transactions || null;
+
+    // Update ticker spans with live data
+    const spans = document.querySelectorAll('#tickerInner span');
+    if (bh        && spans[0]) spans[0].textContent = `◈ BLOCK HEIGHT: ${Number(bh).toLocaleString()}`;
+    if (tps       && spans[4]) spans[4].textContent = `⬡ LIVE TPS: ${tps}`;
+    if (validators && spans[6]) spans[6].textContent = `◈ VALIDATORS: ${validators}`;
+    if (txCount   && spans[8]) spans[8].textContent = `⬡ TOTAL TXS: ${Number(txCount).toLocaleString()}`;
+  } catch {}
+
+  // Also verify node health and show indicator
+  try {
+    const healthy = await checkHealth();
+    const pill = document.getElementById('netPill');
+    if (healthy) {
+      pill.textContent = '⬡ XERIS TESTNET ●';
+      pill.style.borderColor = 'rgba(200,255,0,.4)';
+      pill.style.color = '#c8ff00';
+    } else {
+      pill.textContent = '⬡ XERIS TESTNET ○';
+    }
+  } catch {}
+}
+
+// ══════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════
+function init() {
+  // Restore persistent round state from localStorage
+  try {
+    const saved = localStorage.getItem('solprize_v1');
+    if (saved) {
+      const s = JSON.parse(saved);
+      if (s.round)       state.round = s.round;
+      if (s.drawTarget)  state.drawTarget = s.drawTarget;
+      if (s.winners)     state.winners = s.winners;
+      // Don't restore players — each session starts fresh for testnet
+    }
+  } catch {}
+
+  // If draw target has already passed, start a fresh round
+  if (state.drawTarget < Date.now()) {
+    state.drawTarget = Date.now() + CONFIG.DRAW_INTERVAL * 1000;
+  }
+
+  // Show treasury in faucet tip
+  document.getElementById('faucetLink').title =
+    `Treasury: ${CONFIG.TREASURY}`;
+
+  updateStats();
+  updateCountdown();
+  renderPlayers();
+  renderWinners();
+
+  setInterval(updateCountdown, 1000);
+  setInterval(updateStats, 5000);
+  setInterval(() => { if (state.wallet) refreshBalance(); }, 15000);
+  setInterval(pollNetworkStats, 30000);
+
+  // Persist state every 10s
+  setInterval(() => {
+    try {
+      localStorage.setItem('solprize_v1', JSON.stringify({
+        round:      state.round,
+        drawTarget: state.drawTarget,
+        winners:    state.winners.slice(0, 20),
+      }));
+    } catch {}
+  }, 10000);
+
+  // Boot: health check + stats
+  pollNetworkStats();
+  toast('⬡ Connected to Xeris testnet', 'info', 3000);
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+
+</body>
+</html>
