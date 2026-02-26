@@ -1233,6 +1233,45 @@ async function connectWalletConnect() {
   }
 }
 
+
+// ══════════════════════════════════════════════
+//  SHARED STATE API
+// ══════════════════════════════════════════════
+async function fetchSharedState() {
+  try {
+    const res = await fetch('/api/state', { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return await res.json();
+  } catch(e) { console.warn('[xeris.fun] fetchSharedState:', e.message); return null; }
+}
+async function registerJoin(address, tickets, txSig) {
+  try {
+    const res = await fetch('/api/state', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({action:'join', address, tickets, txSig}),
+      signal: AbortSignal.timeout(10000)
+    });
+    return await res.json();
+  } catch(e) { console.warn('[xeris.fun] registerJoin:', e.message); return null; }
+}
+async function triggerDraw(round) {
+  try {
+    const res = await fetch('/api/state', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({action:'draw', round}),
+      signal: AbortSignal.timeout(10000)
+    });
+    return await res.json();
+  } catch(e) { console.warn('[xeris.fun] triggerDraw:', e.message); return null; }
+}
+async function pollSharedState() {
+  const data = await fetchSharedState();
+  if (!data || !data.ok) return;
+  if (data.round) { state.round = data.round; state.drawTarget = data.drawTarget || getRoundEnd(data.round); }
+  if (Array.isArray(data.players)) { state.players = data.players; renderPlayers(); updateStats(); }
+  if (Array.isArray(data.winners) && data.winners.length > 0) { state.winners = data.winners; renderWinners(); }
+}
+
 // ══════════════════════════════════════════════
 //  LOTTERY LOGIC
 // ══════════════════════════════════════════════
