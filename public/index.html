@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <!-- xeris.fun v6.2 — robust wallet connection + transaction signing 20260221 -->
+  <!-- xeris.fun v6.6 — shared state API, balance-verified buy, server draw 20260225 -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>XERIS.FUN — On-Chain Lottery</title>
   <meta name="description" content="Buy XRS tickets. One random winner takes 95% of the prize pool every draw. Provably fair on-chain lottery on Xeris blockchain." />
@@ -1237,28 +1237,24 @@ const CONFIG = Object.freeze({
   MAX_TICKETS:    100,
   WINNER_SHARE:   0.95,
   TREASURY_SHARE: 0.05,
-  DRAW_INTERVAL:  5 * 60,                          // 5 min draws on testnet
+  DRAW_INTERVAL:  5 * 60,                          // 5 min draws on testnet (seconds)
+  // ── Fixed epoch: all clients compute the same round number deterministically ──
+  // Set to Feb 25 2026 00:00:00 UTC — round 1 starts here.
+  EPOCH_START:    1740441600000,
   NODE_IP:        '138.197.116.81',
   RPC_PORT:       50008,
   NET_PORT:       56001,
-  // Resolved at runtime — HTTPS goes via /api/proxy, HTTP goes direct
-  // RPC_URL used by xerisRPC() and WalletConnect chain config
   get RPC_URL()  { return IS_PROD ? `${PROXY}?target=rpc` : `http://138.197.116.81:50008/rpc`; },
   NETWORK:        'xeris-testnet',
   CURRENCY:       'XRS',
   WC_PROJECT_ID:  'YOUR_WALLETCONNECT_PROJECT_ID',  // from cloud.walletconnect.com
   LAMPORTS:       1_000_000_000,
   FAUCET_AMOUNT:  50,
-  // Explorer links: <a href> navigation is NOT blocked by mixed-content rules
-  // (only fetch() is blocked). So we link directly to the node's HTTP address.
-  // The user's browser can open http:// links from an https:// page via <a target="_blank">.
   EXPLORER_NODE:  'http://138.197.116.81:50008',
-  // Returns a clickable explorer URL for a real tx signature, or null for fake sigs
   txLink(sig) {
     if (!sig || sig.startsWith('testnet-') || sig.startsWith('demo-')) return null;
     return `${this.EXPLORER_NODE}/v2/tx/${encodeURIComponent(sig)}`;
   },
-  // Returns an explorer link for a wallet address
   addrLink(addr) {
     if (!addr) return null;
     return `${this.EXPLORER_NODE}/v2/account/${encodeURIComponent(addr)}`;
@@ -1266,17 +1262,32 @@ const CONFIG = Object.freeze({
 });
 
 // ══════════════════════════════════════════════
+//  ROUND SCHEDULE — deterministic, epoch-based
+//  All users compute the same round number from the same fixed epoch.
+// ══════════════════════════════════════════════
+function getCurrentRound() {
+  return Math.floor((Date.now() - CONFIG.EPOCH_START) / (CONFIG.DRAW_INTERVAL * 1000)) + 1;
+}
+function getRoundStart(round) {
+  return CONFIG.EPOCH_START + (round - 1) * CONFIG.DRAW_INTERVAL * 1000;
+}
+function getRoundEnd(round) {
+  return CONFIG.EPOCH_START + round * CONFIG.DRAW_INTERVAL * 1000;
+}
+
+// ══════════════════════════════════════════════
 //  STATE
 // ══════════════════════════════════════════════
 const state = {
-  wallet: null,           // { address, method }
-  balance: 0,
-  isBuying: false,        // mutex
-  players: [],            // [{ address, tickets }]
-  winners: [],            // [{ address, amount, round, username }]
-  round: 1,
-  drawTarget: Date.now() + CONFIG.DRAW_INTERVAL * 1000,
-  usernames: {},          // { [address]: username } — persisted in localStorage
+  wallet:     null,     // { address, method }
+  balance:    0,
+  isBuying:   false,    // mutex
+  players:    [],       // [{ address, tickets }] — built from on-chain txs
+  winners:    [],       // [{ address, amount, round, username }]
+  round:      getCurrentRound(),
+  drawTarget: getRoundEnd(getCurrentRound()),
+  usernames:  {},       // { [address]: username } — persisted in localStorage
+  lastPollRound: -1,    // track which round we last fetched on-chain players for
 };
 
 // ══════════════════════════════════════════════
@@ -1488,12 +1499,25 @@ function parseTxCount(stats) {
 
 async function getLatestBlockhash() {
   try {
-    return await xerisRPC('getLatestBlockhash');
-  } catch {
-    // fallback to getRecentBlockhash
-    try { return await xerisRPC('getRecentBlockhash'); }
-    catch { return null; }
-  }
+    const r = await xerisRPC('getLatestBlockhash');
+    // Some Xeris testnet nodes return the string "current" as a placeholder blockhash.
+    // Treat it as missing and generate a unique nonce instead.
+    const bh = r?.blockhash || r?.value?.blockhash || (typeof r === 'string' ? r : null);
+    if (bh && bh !== 'current') return { blockhash: bh };
+  } catch {}
+  // fallback to getRecentBlockhash
+  try {
+    const r2 = await xerisRPC('getRecentBlockhash');
+    const bh2 = r2?.blockhash || r2?.value?.blockhash || (typeof r2 === 'string' ? r2 : null);
+    if (bh2 && bh2 !== 'current') return { blockhash: bh2 };
+  } catch {}
+  // Last resort: derive a unique nonce from current block height or timestamp
+  try {
+    const stats = await fetchNetworkStats();
+    const height = parseBlockHeight(stats);
+    if (height) return { blockhash: `blk-${height}` };
+  } catch {}
+  return { blockhash: `nonce-${Date.now()}` };
 }
 
 // Check network health — returns true/false
@@ -1507,7 +1531,7 @@ async function checkHealth() {
 // ══════════════════════════════════════════════
 //  FAUCET
 // ══════════════════════════════════════════════
-const FAUCET_COOLDOWN_MS = 30 * 1000; // 30 second cooldown between requests
+const FAUCET_COOLDOWN_MS = 0; // No client-side cooldown — node handles rate limiting
 let faucetCooldownTimer = null;
 
 function getFaucetLastUsed(address) {
@@ -1525,7 +1549,7 @@ function setFaucetLastUsed(address) {
 }
 
 function updateFaucetBtn() {
-  const btn = document.getElementById('faucetBtn');
+  const btn        = document.getElementById('faucetBtn');
   const cooldownEl = document.getElementById('faucetCooldown');
   if (!btn || !cooldownEl) return;
 
@@ -1535,31 +1559,9 @@ function updateFaucetBtn() {
     return;
   }
 
-  const lastUsed = getFaucetLastUsed(state.wallet.address);
-  const elapsed  = Date.now() - lastUsed;
-  const remaining = FAUCET_COOLDOWN_MS - elapsed;
-
-  if (remaining > 0) {
-    btn.disabled = true;
-    const secs = Math.ceil(remaining / 1000);
-    cooldownEl.textContent = `⏳ Available again in ${secs}s`;
-    // Tick every second
-    if (!faucetCooldownTimer) {
-      faucetCooldownTimer = setInterval(() => {
-        const r = FAUCET_COOLDOWN_MS - (Date.now() - getFaucetLastUsed(state.wallet?.address || ''));
-        if (r <= 0) {
-          clearInterval(faucetCooldownTimer);
-          faucetCooldownTimer = null;
-          updateFaucetBtn();
-        } else {
-          cooldownEl.textContent = `⏳ Available again in ${Math.ceil(r / 1000)}s`;
-        }
-      }, 1000);
-    }
-  } else {
-    btn.disabled = false;
-    cooldownEl.textContent = `Tap to receive ${CONFIG.FAUCET_AMOUNT} XRS instantly`;
-  }
+  // Always enabled — no client-side cooldown
+  btn.disabled = false;
+  cooldownEl.textContent = `Tap to receive ${CONFIG.FAUCET_AMOUNT} XRS instantly`;
 }
 
 async function requestFaucet(address) {
@@ -1567,21 +1569,20 @@ async function requestFaucet(address) {
   const cooldownEl = document.getElementById('faucetCooldown');
   if (!address || !btn || btn.disabled) return;
 
+  // Lock button during request only
   btn.disabled  = true;
   btn.innerHTML = `<span class="faucet-icon">⏳</span><span class="faucet-btn-text">REQUESTING…</span>`;
   cooldownEl.textContent = 'Contacting Xeris node…';
   setStatus(`Requesting ${CONFIG.FAUCET_AMOUNT} XRS from faucet…`);
 
   try {
-    // XRS addresses are pure base58 alphanumeric — safe in URL paths as-is.
     const amt = CONFIG.FAUCET_AMOUNT;
 
-    // Helper: fetch one URL, parse result, return { ok, data }
     async function tryUrl(url) {
       try {
         const res  = await fetch(url, { method: 'GET' });
         const text = await res.text();
-        console.log('[xeris.fun] faucet', url.slice(-60), '→', res.status, text.slice(0, 100));
+        console.log('[xeris.fun] faucet', url.slice(-60), '→', res.status, text.slice(0, 120));
         let parsed = {};
         try { parsed = JSON.parse(text); }
         catch { if (text.trim()) parsed = { raw: text.trim() }; }
@@ -1594,17 +1595,17 @@ async function requestFaucet(address) {
 
     let result = { ok: false, data: {} };
 
-    // Attempt 1: proxy with raw address (no encoding — base58 is URL-safe)
+    // Attempt 1: proxy with raw address
     if (!result.ok && IS_PROD) {
       result = await tryUrl(`/api/proxy?target=net&path=%2Fairdrop%2F${address}%2F${amt}`);
     }
 
-    // Attempt 2: proxy with percent-encoded address (belt-and-suspenders)
+    // Attempt 2: proxy with encoded path
     if (!result.ok && IS_PROD) {
       result = await tryUrl(`/api/proxy?target=net&path=${encodeURIComponent(`/airdrop/${address}/${amt}`)}`);
     }
 
-    // Attempt 3: direct HTTP (blocked by mixed-content on HTTPS, but works on localhost)
+    // Attempt 3: direct HTTP
     if (!result.ok) {
       result = await tryUrl(`http://${CONFIG.NODE_IP}:${CONFIG.NET_PORT}/airdrop/${address}/${amt}`);
     }
@@ -1615,40 +1616,38 @@ async function requestFaucet(address) {
     const explorerUrl = sig ? CONFIG.txLink(sig) : null;
 
     if (result.ok || sig) {
-      setFaucetLastUsed(address);
       if (sig) {
-        toastTx(`✓ ${amt} XRS airdropped!`, sig, explorerUrl, 'success', 12000);
-        cooldownEl.textContent = `✓ ${amt} XRS sent! Balance updating…`;
+        toastTx(`✓ ${amt} XRS airdropped!`, sig, explorerUrl, 'success', 10000);
+        cooldownEl.textContent = `✓ ${amt} XRS sent! Tap again for more.`;
       } else {
-        toast(`✓ Faucet accepted! ${amt} XRS incoming…`, 'success', 7000);
-        cooldownEl.textContent = `✓ Request accepted — balance updating…`;
+        toast(`✓ ${amt} XRS incoming!`, 'success', 5000);
+        cooldownEl.textContent = `✓ Request sent! Tap again for more.`;
       }
-      // Poll balance every 3s for 30s
-      let tries = 0;
-      const poll = setInterval(async () => {
-        await refreshBalance();
-        if (++tries >= 10) { clearInterval(poll); setStatus(''); }
-      }, 3000);
+      // Refresh balance a few times to catch the incoming funds
+      setTimeout(refreshBalance, 2000);
+      setTimeout(refreshBalance, 6000);
+      setTimeout(() => { refreshBalance(); setStatus(''); }, 12000);
     } else {
       const msg = d.error || d.message || d.msg
-               || (result.status ? `HTTP ${result.status}` : 'Node unreachable');
-      toast(`Faucet failed: ${msg}`, 'error', 7000);
-      cooldownEl.textContent = `Error: ${msg}`;
+               || (result.status ? `HTTP ${result.status}` : 'Node unreachable — try again');
+      toast(`Faucet: ${msg}`, 'error', 6000);
+      cooldownEl.textContent = `${msg} — tap to retry`;
       setStatus('');
     }
 
   } catch (e) {
     console.error('[xeris.fun] faucet error:', e);
     toast(`Faucet error: ${e.message}`, 'error', 5000);
-    cooldownEl.textContent = 'Error — try again';
+    cooldownEl.textContent = 'Error — tap to retry';
     setStatus('');
   } finally {
+    // Re-enable button immediately — let the node decide rate limits
     btn.innerHTML = `
       <span class="faucet-icon">🚰</span>
       <span class="faucet-btn-text">GET FREE XRS</span>
       <span class="faucet-amount-badge" id="faucetAmountBadge">${CONFIG.FAUCET_AMOUNT} XRS</span>
     `;
-    updateFaucetBtn();
+    btn.disabled = false;  // Always re-enable right away
   }
 }
 
@@ -2187,9 +2186,83 @@ function initWalletUI() {
 }
 
 // ══════════════════════════════════════════════
+//  SHARED STATE API — single source of truth
+//  All browsers poll /api/state every 5s.
+//  After a confirmed buy, POST to /api/state to register.
+// ══════════════════════════════════════════════
+
+async function fetchSharedState() {
+  try {
+    const res = await fetch('/api/state', { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } catch (e) {
+    console.warn('[xeris.fun] fetchSharedState error:', e.message);
+    return null;
+  }
+}
+
+async function registerJoin(address, tickets, txSig) {
+  try {
+    const res = await fetch('/api/state', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ action: 'join', address, tickets, txSig }),
+      signal:  AbortSignal.timeout(10000),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } catch (e) {
+    console.warn('[xeris.fun] registerJoin error:', e.message);
+    return null;
+  }
+}
+
+async function triggerDraw(round) {
+  try {
+    const res = await fetch('/api/state', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ action: 'draw', round }),
+      signal:  AbortSignal.timeout(10000),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } catch (e) {
+    console.warn('[xeris.fun] triggerDraw error:', e.message);
+    return null;
+  }
+}
+
+// Poll shared state and sync local state — called every 5s
+async function pollSharedState() {
+  const data = await fetchSharedState();
+  if (!data || !data.ok) return;
+
+  // Sync players from server — authoritative list shared across all users
+  if (Array.isArray(data.players)) {
+    state.players = data.players;
+    renderPlayers();
+    updateStats();
+  }
+
+  // Sync winner history
+  if (Array.isArray(data.winners) && data.winners.length > 0) {
+    state.winners = data.winners;
+    renderWinners();
+  }
+
+  // If server says round was already drawn, record it
+  if (data.drawn && data.winner && data.round === state.round) {
+    // Round just drew on another client — sync locally
+    applyWinner(data.winner);
+  }
+}
+
+// ══════════════════════════════════════════════
 //  LOTTERY LOGIC
 // ══════════════════════════════════════════════
-let isDrawing = false; // mutex — prevents runDraw firing every second while drawTarget===0
+let isDrawing = false; // mutex
 
 function totalTickets() {
   return state.players.reduce((s, p) => s + p.tickets, 0);
@@ -2199,6 +2272,7 @@ function poolXRS() {
   return (totalTickets() * CONFIG.TICKET_PRICE).toFixed(4);
 }
 
+// Optimistically add tickets locally — server is authoritative on next poll
 function addTickets(address, count) {
   const existing = state.players.find(p => p.address === address);
   if (existing) {
@@ -2210,68 +2284,67 @@ function addTickets(address, count) {
   updateStats();
 }
 
-function runDraw() {
-  const total = totalTickets();
-  if (total === 0) return;
+// Apply a winner record from server to local state
+function applyWinner(winnerRecord) {
+  const alreadyRecorded = state.winners.some(
+    w => w.round === winnerRecord.round && w.address === winnerRecord.address
+  );
+  if (alreadyRecorded) return;
 
-  // ── Weighted random winner selection ──
-  const roll = Math.floor(Math.random() * total);
-  let cumulative = 0;
-  let winner = null;
-  for (const p of state.players) {
-    cumulative += p.tickets;
-    if (roll < cumulative) { winner = p; break; }
-  }
-  if (!winner) winner = state.players[state.players.length - 1];
+  state.winners.unshift(winnerRecord);
+  renderWinners();
 
-  // ── Calculate split ──
-  const totalPool   = parseFloat(poolXRS());
-  const winnerPrize = parseFloat((totalPool * CONFIG.WINNER_SHARE).toFixed(4));  // 95%
-  const treasuryCut = parseFloat((totalPool * CONFIG.TREASURY_SHARE).toFixed(4)); // 5%
-
-  // ── Record winner ──
-  state.winners.unshift({
-    address:   winner.address,
-    username:  state.usernames[winner.address] || null,
-    amount:    winnerPrize,
-    treasury:  treasuryCut,
-    totalPool: totalPool,
-    round:     state.round,
-  });
-
-  // ── Dispatch payout transactions ──
-  sendPayout(winner.address, winnerPrize, 'winner', state.round);
-  sendPayout(CONFIG.TREASURY, treasuryCut, 'treasury', state.round);
-
-  // ── Show win modal if current player won ──
-  if (state.wallet && winner.address === state.wallet.address) {
-    document.getElementById('winAmount').textContent = `${winnerPrize} XRS`;
+  // Show win modal if this user won
+  if (state.wallet && winnerRecord.address === state.wallet.address) {
+    document.getElementById('winAmount').textContent = `${winnerRecord.amount} XRS`;
     document.getElementById('winTreasuryNote').textContent =
-      `(${treasuryCut} XRS → treasury for marketing & development)`;
+      `(${winnerRecord.treasury} XRS → treasury for marketing & development)`;
     openModal('winModal');
   }
 
   toast(
-    `🏆 Round #${state.round}: ${getDisplayName(winner.address)} wins ${winnerPrize} XRS! (${treasuryCut} XRS → treasury)`,
+    `🏆 Round #${winnerRecord.round}: ${getDisplayName(winnerRecord.address)} wins ${winnerRecord.amount} XRS!`,
     'success', 10000
   );
+}
 
-  // ── Advance round ──
-  state.round++;
-  state.players  = [];
-  state.drawTarget = Date.now() + CONFIG.DRAW_INTERVAL * 1000;
+async function runDraw() {
+  if (totalTickets() === 0) return;
 
+  // POST to server — server picks the deterministic winner
+  const result = await triggerDraw(state.round);
+
+  if (!result) {
+    console.warn('[xeris.fun] draw request failed — will retry next tick');
+    return;
+  }
+  if (result.alreadyDrawn && result.winner) {
+    // Another client triggered the draw first
+    applyWinner(result.winner);
+  } else if (result.ok && result.winner) {
+    applyWinner(result.winner);
+    // Send on-chain payout
+    sendPayout(result.winner.address, result.winner.amount, 'winner', state.round);
+    sendPayout(CONFIG.TREASURY, result.winner.treasury, 'treasury', state.round);
+  }
+
+  // Advance to next round
+  state.round      = getCurrentRound();
+  state.players    = [];
+  state.drawTarget = getRoundEnd(state.round);
+  state.lastPollRound = -1;
   renderPlayers();
-  renderWinners();
   updateStats();
 }
 
 // Submit a payout transaction to the Xeris network
+// NOTE: Payouts are signed by the treasury key server-side.
+// This function sends a payout request to the node — the node signs with treasury key.
 async function sendPayout(toAddress, amountXRS, type, round) {
   try {
     const lamports = Math.round(amountXRS * CONFIG.LAMPORTS);
     const bhResult = await getLatestBlockhash();
-    const blockhash = bhResult?.blockhash || bhResult?.value?.blockhash || ('payout-bh-' + Date.now());
+    const blockhash = bhResult?.blockhash || (`payout-bh-${Date.now()}`);
 
     const txPayload = {
       recentBlockhash: blockhash,
@@ -2288,7 +2361,7 @@ async function sendPayout(toAddress, amountXRS, type, round) {
       meta: { app: 'xeris.fun', round, type, amount: amountXRS },
     };
 
-    const txBase64 = btoa(JSON.stringify(txPayload));
+    const txBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(txPayload))));
 
     // Try submit endpoint first
     try {
@@ -2312,15 +2385,18 @@ async function sendPayout(toAddress, amountXRS, type, round) {
 }
 
 // ══════════════════════════════════════════════
-//  BUY FLOW — real on-chain transaction via Xeris wallet
+//  BUY FLOW
+//  1. Ask wallet to sign & send transfer to treasury
+//  2. Verify purchase by polling balance until it drops
+//  3. Register confirmed buy with /api/state (shared across all users)
 // ══════════════════════════════════════════════
 async function handleBuy() {
   if (!state.wallet)  { toast('Connect your wallet first', 'error'); return; }
   if (state.isBuying) { toast('Purchase already in progress…', 'info'); return; }
 
-  const qty      = clampInt(document.getElementById('ticketCount').value, 1, CONFIG.MAX_TICKETS);
+  const qty       = clampInt(document.getElementById('ticketCount').value, 1, CONFIG.MAX_TICKETS);
   document.getElementById('ticketCount').value = qty;
-  const costXRS  = qty * CONFIG.TICKET_PRICE;
+  const costXRS   = qty * CONFIG.TICKET_PRICE;
   const costLamps = Math.round(costXRS * CONFIG.LAMPORTS);
 
   if (state.balance > 0 && state.balance < costLamps) {
@@ -2328,24 +2404,20 @@ async function handleBuy() {
     return;
   }
 
-  // Get the active provider — try cached first, then re-scan (handles late injection)
-  let provider = _xerisProvider;
-  if (!provider) provider = getXerisProvider();
+  let provider = _xerisProvider || getXerisProvider();
 
   if (!provider) {
     if (state.wallet.method === 'demo') {
-      toast('Demo mode cannot sign real transactions. Open xeris.fun in the Xeris wallet browser.', 'error', 7000);
+      toast('Demo mode — cannot sign real transactions. Open xeris.fun inside Xeris wallet browser.', 'error', 7000);
       return;
     }
     if (state.wallet.method === 'paste') {
-      toast('⚠ Wallet provider not found. Tap "Connect Wallet" and choose Xeris Wallet.', 'error', 8000);
+      toast('⚠ Open xeris.fun inside the Xeris wallet browser to make real transactions.', 'error', 8000);
       return;
     }
     toast('Xeris wallet disconnected — please reconnect', 'error', 6000);
     return;
   }
-
-  // Cache it for this session
   if (!_xerisProvider) _xerisProvider = provider;
 
   state.isBuying = true;
@@ -2353,34 +2425,30 @@ async function handleBuy() {
   btn.disabled    = true;
   btn.textContent = 'WAITING FOR WALLET…';
 
+  // Snapshot balance before the buy so we can verify payment
+  const balanceBefore = state.balance > 0 ? state.balance : await fetchBalance(state.wallet.address);
+
   try {
-    // ── Step 1: Get blockhash from node ──
+    // ── Step 1: Get blockhash ──
     setStatus('Fetching blockhash…');
     const bhResult  = await getLatestBlockhash();
-    const blockhash = bhResult?.blockhash
-                   || bhResult?.value?.blockhash
-                   || bhResult?.result?.blockhash
-                   || ('bh-' + Date.now());
+    const blockhash = bhResult?.blockhash || ('bh-' + Date.now());
 
-    // ── Step 2: Build the transaction object ──
-    // Exact format from Xeris developer guide §7:
-    //   { recentBlockhash, instructions: [{ from, to, amount }] }
-    // The wallet signs JSON.stringify(transaction) with its ed25519 key
-    // and the node receives only the signature as tx_base64.
+    // ── Step 2: Build transaction object ──
     const txObject = {
       recentBlockhash: blockhash,
       feePayer: state.wallet.address,
       instructions: [{
-        from:   state.wallet.address,
-        to:     CONFIG.TREASURY,
-        amount: costXRS,                 // XRS units (what the guide uses)
-        lamports: costLamps,             // lamports for precision
+        from:      state.wallet.address,
+        to:        CONFIG.TREASURY,
+        amount:    costXRS,
+        lamports:  costLamps,
         programId: '11111111111111111111111111111111',
-        type: 'transfer',
+        type:      'transfer',
       }],
       meta: { app: 'xeris.fun', round: state.round, tickets: qty },
     };
-    const txMessage = JSON.stringify(txObject);   // the bytes the wallet signs
+    const txMessage = JSON.stringify(txObject);
 
     setStatus('Please approve transaction in Xeris wallet…');
     btn.textContent = 'APPROVE IN WALLET…';
@@ -2388,115 +2456,138 @@ async function handleBuy() {
     let txSig = null;
     let rejectedByUser = false;
 
-    // Helper to detect user rejection
     const isRejection = (e) =>
       e.code === 4001 || e.code === -32603 ||
       /rejected|denied|cancel|user declin/i.test(e.message || '');
 
-    // ── Strategy A: wallet handles everything — signAndSendTransaction ──
-    // Phantom-style: pass the tx object, wallet signs + submits, returns sig
+    // ── Strategy A: signAndSendTransaction (wallet handles submission) ──
     if (!txSig && !rejectedByUser && typeof provider.signAndSendTransaction === 'function') {
       try {
         const res = await provider.signAndSendTransaction(txObject);
         txSig = typeof res === 'string' ? res : res?.signature || res?.txid || res?.id || null;
-        console.log('[xeris.fun] signAndSendTransaction:', res);
       } catch(e) {
-        if (isRejection(e)) { rejectedByUser = true; }
-        else console.warn('[xeris.fun] signAndSendTransaction failed:', e.message);
+        if (isRejection(e)) rejectedByUser = true;
+        else console.warn('[xeris.fun] signAndSendTransaction:', e.message);
       }
     }
 
-    // ── Strategy B: provider.request({ method: 'sendTransaction' }) ──
+    // ── Strategy B: provider.request sendTransaction ──
     if (!txSig && !rejectedByUser && typeof provider.request === 'function') {
       try {
         const res = await provider.request({ method: 'sendTransaction', params: [txObject] });
         txSig = typeof res === 'string' ? res : res?.signature || res?.result || null;
-        console.log('[xeris.fun] request sendTransaction:', res);
       } catch(e) {
-        if (isRejection(e)) { rejectedByUser = true; }
-        else console.warn('[xeris.fun] request sendTransaction failed:', e.message);
+        if (isRejection(e)) rejectedByUser = true;
+        else console.warn('[xeris.fun] request sendTransaction:', e.message);
       }
     }
 
-    // ── Strategy C: signMessage → get signature bytes → submit to node ──
-    // Per dev guide: sign the JSON string, encode signature as base64, POST to /submit
+    // ── Strategy C: signMessage → submit signed envelope ──
     if (!txSig && !rejectedByUser && typeof provider.signMessage === 'function') {
       try {
         setStatus('Sign the transaction in your Xeris wallet…');
-        const encoder = new TextEncoder();
+        const encoder  = new TextEncoder();
         const msgBytes = encoder.encode(txMessage);
-        const signed = await provider.signMessage(msgBytes);
-        // signMessage returns { signature: Uint8Array } or just Uint8Array
+        const signed   = await provider.signMessage(msgBytes);
         const sigBytes = signed?.signature || signed;
-        const signatureBase64 = btoa(String.fromCharCode(...new Uint8Array(sigBytes)));
-        setStatus('Submitting signed transaction…');
+        const sigB64   = btoa(String.fromCharCode(...new Uint8Array(sigBytes)));
+        const msgB64   = btoa(String.fromCharCode(...msgBytes));
+
         btn.textContent = 'SUBMITTING…';
-        // Submit per dev guide: tx_base64 is the signature
-        const d = await xerisSubmit(signatureBase64);
-        txSig = d.signature || d.txid || d.id || d.tx || null;
+        setStatus('Submitting signed transaction…');
+
+        // Full signed envelope
+        const envelope    = JSON.stringify({ pubkey: state.wallet.address, message: msgB64, signature: sigB64 });
+        const envB64      = btoa(unescape(encodeURIComponent(envelope)));
+        let d = await xerisSubmit(envB64);
+        txSig = d?.signature || d?.txid || d?.id || null;
+
         if (!txSig) {
-          // Also try RPC sendTransaction
-          const r = await xerisRPC('sendTransaction', [signatureBase64]);
+          d = await xerisSubmit(sigB64);
+          txSig = d?.signature || d?.txid || d?.id || null;
+        }
+        if (!txSig) {
+          const r = await xerisRPC('sendTransaction', [envB64]);
           txSig = typeof r === 'string' ? r : r?.signature || null;
         }
-        console.log('[xeris.fun] signMessage + submit:', txSig);
       } catch(e) {
-        if (isRejection(e)) { rejectedByUser = true; }
-        else console.warn('[xeris.fun] signMessage failed:', e.message);
+        if (isRejection(e)) rejectedByUser = true;
+        else console.warn('[xeris.fun] signMessage:', e.message);
       }
     }
 
-    // ── Strategy D: signTransaction — wallet signs, we get back signed tx ──
+    // ── Strategy D: signTransaction ──
     if (!txSig && !rejectedByUser && typeof provider.signTransaction === 'function') {
       try {
         setStatus('Sign the transaction in your Xeris wallet…');
         const signed = await provider.signTransaction(txObject);
-        // Extract signature — may be in signed.signature, signed.serialized, or signed itself
-        let submitPayload;
+        let payload;
         if (signed?.signature) {
           const sb = signed.signature;
-          submitPayload = typeof sb === 'string' ? sb
-            : btoa(String.fromCharCode(...new Uint8Array(sb)));
+          payload = typeof sb === 'string' ? sb : btoa(String.fromCharCode(...new Uint8Array(sb)));
         } else {
-          submitPayload = typeof signed === 'string' ? signed : btoa(JSON.stringify(signed));
+          payload = typeof signed === 'string' ? signed : btoa(JSON.stringify(signed));
         }
+        btn.textContent = 'SUBMITTING…';
         setStatus('Submitting signed transaction…');
-        btn.textContent = 'SUBMITTING…';
-        const d = await xerisSubmit(submitPayload);
-        txSig = d.signature || d.txid || d.id || d.tx || null;
+        const d = await xerisSubmit(payload);
+        txSig = d?.signature || d?.txid || d?.id || null;
         if (!txSig) {
-          const r = await xerisRPC('sendTransaction', [submitPayload]);
+          const r = await xerisRPC('sendTransaction', [payload]);
           txSig = typeof r === 'string' ? r : r?.signature || null;
         }
-        console.log('[xeris.fun] signTransaction + submit:', txSig);
       } catch(e) {
-        if (isRejection(e)) { rejectedByUser = true; }
-        else console.warn('[xeris.fun] signTransaction failed:', e.message);
-      }
-    }
-
-    // ── Strategy E: Last resort — submit the full tx JSON (some testnets accept unsigned) ──
-    if (!txSig && !rejectedByUser) {
-      try {
-        setStatus('Submitting transaction…');
-        btn.textContent = 'SUBMITTING…';
-        const txBase64 = btoa(unescape(encodeURIComponent(txMessage)));
-        const d = await xerisSubmit(txBase64);
-        txSig = d.signature || d.txid || d.id || d.tx || null;
-        if (!txSig) {
-          const r = await xerisRPC('sendTransaction', [txBase64]);
-          txSig = typeof r === 'string' ? r : r?.signature || null;
-        }
-        console.log('[xeris.fun] unsigned JSON submit:', txSig);
-      } catch(e) {
-        console.warn('[xeris.fun] unsigned submit failed:', e.message);
+        if (isRejection(e)) rejectedByUser = true;
+        else console.warn('[xeris.fun] signTransaction:', e.message);
       }
     }
 
     if (rejectedByUser) throw new Error('Transaction rejected by user');
 
-    // ── Step 4: Update game state ──
+    // ── Step 3: Verify payment by polling balance ──
+    // The wallet may have sent the tx even if we didn't get a sig back.
+    // Poll balance up to 5 times (25s) until it drops by the expected amount.
+    setStatus('Verifying payment on Xeris network…');
+    btn.textContent = 'VERIFYING…';
+
+    let confirmed = false;
+    let balanceAfter = balanceBefore;
+
+    for (let attempt = 0; attempt < 5; attempt++) {
+      await new Promise(r => setTimeout(r, 5000)); // wait 5s between polls
+      balanceAfter = await fetchBalance(state.wallet.address);
+      const dropped = balanceBefore - balanceAfter;
+      // Accept if balance dropped by at least 99% of cost (allows for fees)
+      if (dropped >= costLamps * 0.99) {
+        confirmed = true;
+        state.balance = balanceAfter;
+        break;
+      }
+      // If we got a tx sig, trust it after 2 attempts
+      if (txSig && attempt >= 1) {
+        confirmed = true;
+        break;
+      }
+      setStatus(`Verifying… (${attempt + 1}/5)`);
+    }
+
+    if (!confirmed) {
+      toast('⚠ Payment not detected on Xeris node. Try again or check your balance.', 'error', 10000);
+      setStatus('');
+      return;
+    }
+
+    // ── Step 4: Register with shared state API — visible to ALL users ──
+    setStatus('Registering tickets…');
+    const joinResult = await registerJoin(state.wallet.address, qty, txSig);
+
+    if (!joinResult?.ok && !joinResult?.duplicate) {
+      console.warn('[xeris.fun] registerJoin failed:', joinResult);
+    }
+
+    // Optimistic local update
     addTickets(state.wallet.address, qty);
+
     const explorerUrl = CONFIG.txLink(txSig);
     toastTx(`✓ ${qty} ticket${qty>1?'s':''} bought!`, txSig, explorerUrl, 'success', 12000);
     setStatusWithLink(
@@ -2504,10 +2595,9 @@ async function handleBuy() {
       explorerUrl ? 'Explorer ↗' : null, explorerUrl
     );
 
-    // ── Step 5: Refresh balance multiple times ──
+    // Refresh from server to sync with other players
+    setTimeout(pollSharedState, 2000);
     await refreshBalance();
-    setTimeout(refreshBalance, 5000);
-    setTimeout(refreshBalance, 12000);
 
   } catch (err) {
     const msg = err.message || String(err);
@@ -2621,7 +2711,7 @@ function updateStats() {
   document.getElementById('statPool').textContent    = pool.toFixed(2);
   document.getElementById('statTickets').textContent = tickets;
   document.getElementById('statPlayers').textContent = players;
-  document.getElementById('statRound').textContent   = `#${state.round}`;
+  document.getElementById('statRound').textContent   = `#${getCurrentRound()}`;
   document.getElementById('poolAmount').textContent  = pool.toFixed(2);
 
   // Live split display
@@ -2643,6 +2733,15 @@ function updateStats() {
 //  COUNTDOWN
 // ══════════════════════════════════════════════
 function updateCountdown() {
+  // Always re-derive round and target from epoch — keeps all clients in sync
+  const round = getCurrentRound();
+  if (round !== state.round) {
+    // A new round has started since last tick — reset without running draw
+    // (draw runs when remaining hits 0 below)
+    state.round = round;
+    state.drawTarget = getRoundEnd(round);
+  }
+
   const remaining = Math.max(0, Math.floor((state.drawTarget - Date.now()) / 1000));
   const h = Math.floor(remaining / 3600);
   const m = Math.floor((remaining % 3600) / 60);
@@ -2654,8 +2753,7 @@ function updateCountdown() {
 
   if (remaining === 0 && totalTickets() > 0 && !isDrawing) {
     isDrawing = true;
-    runDraw();
-    isDrawing = false;
+    runDraw().finally(() => { isDrawing = false; });
   }
 }
 
@@ -2788,24 +2886,21 @@ async function pollNetworkStats() {
 //  INIT
 // ══════════════════════════════════════════════
 function init() {
-  // Load persisted usernames first
+  // Load persisted usernames and winner history
   loadUsernames();
 
-  // Restore persistent round state from localStorage
+  // Restore winner history from localStorage (client-side only — display only)
   try {
-    const saved = localStorage.getItem('xerisfun_v1');
+    const saved = localStorage.getItem('xerisfun_v2');
     if (saved) {
       const s = JSON.parse(saved);
-      if (s.round)       state.round = s.round;
-      if (s.drawTarget)  state.drawTarget = s.drawTarget;
-      if (s.winners)     state.winners = s.winners;
+      if (Array.isArray(s.winners)) state.winners = s.winners;
     }
   } catch {}
 
-  // If draw target has already passed, start a fresh round
-  if (state.drawTarget < Date.now()) {
-    state.drawTarget = Date.now() + CONFIG.DRAW_INTERVAL * 1000;
-  }
+  // Round and drawTarget are always derived from the epoch — never from localStorage
+  state.round      = getCurrentRound();
+  state.drawTarget = getRoundEnd(state.round);
 
   // Show treasury in faucet badge tooltip
   const faucetAmtBadge = document.getElementById('faucetAmountBadge');
@@ -2819,25 +2914,19 @@ function init() {
   renderPlayers();
   renderWinners();
 
+  // Timers
   setInterval(updateCountdown, 1000);
   setInterval(updateStats, 5000);
   setInterval(() => { if (state.wallet) refreshBalance(); }, 15000);
   setInterval(pollNetworkStats, 30000);
 
-  // Persist state every 10s
-  setInterval(() => {
-    try {
-      localStorage.setItem('xerisfun_v1', JSON.stringify({
-        round:      state.round,
-        drawTarget: state.drawTarget,
-        winners:    state.winners.slice(0, 20),
-      }));
-    } catch {}
-  }, 10000);
+  // ── Shared state polling every 5s — syncs all users ──
+  setInterval(pollSharedState, 5000);
 
-  // Boot: health check + stats
+  // Boot: fetch shared state immediately + health check
+  pollSharedState();
   pollNetworkStats();
-  toast('⬡ Connected to Xeris testnet', 'info', 3000);
+  toast(`⬡ Round #${state.round} · Xeris testnet`, 'info', 3000);
 }
 
 document.addEventListener('DOMContentLoaded', init);
