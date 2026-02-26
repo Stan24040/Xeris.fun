@@ -1338,131 +1338,86 @@ function runDraw() {
 //  BUY FLOW
 // ══════════════════════════════════════════════
 async function handleBuy() {
-  if (!state.wallet)   { toast('Connect your wallet first', 'error'); return; }
-  if (state.isBuying)  { toast('Purchase already in progress…', 'info'); return; }
+  if (!state.wallet) { toast('Connect your wallet first', 'error'); return; }
+  if (state.isBuying) { toast('Purchase already in progress', 'info'); return; }
 
-  const qty = clampInt(document.getElementById('ticketCount').value, 1, CONFIG.MAX_TICKETS);
+  const qty = Math.min(100, Math.max(1, parseInt(document.getElementById('ticketCount').value) || 1));
   document.getElementById('ticketCount').value = qty;
+  const costXRS = qty * 10;
+  const costLamps = Math.round(costXRS * 1000000000);
 
-  const costXRS   = qty * CONFIG.TICKET_PRICE;
-  const costLamps = Math.round(costXRS * CONFIG.LAMPORTS);
-
-  // Balance check
   if (state.balance > 0 && state.balance < costLamps) {
-    toast(`Insufficient balance — you need ${costXRS.toFixed(4)} XRS. Use the faucet ↓`, 'error', 6000);
-    return;
+    toast('Insufficient balance — use faucet below', 'error', 6000); return;
   }
+
+  let provider = window.xeris || window.xrs || (window.solana && !window.solana.isPhantom ? window.solana : null);
+  if (!provider) { toast('Open in Xeris wallet browser to buy tickets', 'error', 7000); return; }
 
   state.isBuying = true;
   const btn = document.getElementById('buyBtn');
-  btn.disabled  = true;
-  btn.textContent = 'PROCESSING…';
+  btn.disabled = true; btn.textContent = 'APPROVE IN WALLET…';
 
   try {
-    // ── Step 1: Get latest blockhash from Xeris node ──
-    setStatus('Fetching blockhash from Xeris node…');
-    const bhResult  = await getLatestBlockhash();
-    const blockhash = bhResult?.blockhash
-                   || bhResult?.value?.blockhash
-                   || bhResult?.result?.blockhash
-                   || ('testnet-bh-' + Date.now());
-    const lastValidBlockHeight = bhResult?.lastValidBlockHeight
-                              || bhResult?.value?.lastValidBlockHeight
-                              || null;
-
-    // ── Step 2: Construct Xeris-compatible transfer transaction ──
-    // Xeris uses Solana-compatible transaction format
-    const txPayload = {
-      recentBlockhash: blockhash,
-      lastValidBlockHeight: lastValidBlockHeight,
+    const txObject = {
+      recentBlockhash: 'bh-' + Date.now(),
       feePayer: state.wallet.address,
-      instructions: [
-        {
-          programId: '11111111111111111111111111111111', // System program
-          type: 'transfer',
-          keys: [
-            { pubkey: state.wallet.address, isSigner: true,  isWritable: true },
-            { pubkey: CONFIG.TREASURY,      isSigner: false, isWritable: true },
-          ],
-          data: {
-            instruction: 2,           // SystemProgram Transfer
-            lamports: costLamps,
-          },
-        },
-      ],
-      meta: {
-        app:    'solprize',
-        round:  state.round,
-        tickets: qty,
-        buyer:  state.wallet.address,
-        treasury: CONFIG.TREASURY,
-      },
+      instructions: [{ from: state.wallet.address, to: '6G4GroMrVsGjd3xhywxfzXDg7vPn1V2Mky4B3qsXVGHo', amount: costXRS, lamports: costLamps, type: 'transfer' }],
+      meta: { app: 'xeris.fun', round: state.round, tickets: qty }
     };
 
-    const txBase64 = btoa(JSON.stringify(txPayload));
-
-    // ── Step 3: Submit to Xeris network ──
-    setStatus('Submitting transaction to Xeris testnet…');
     let txSig = null;
-    let submitOk = false;
+    let walletDone = false;
 
-    // Try port 56001 /submit first (preferred)
-    try {
-      const r = await fetch(`${CONFIG.NET_URL}/submit`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tx_base64: txBase64 }),
-      });
-      const d = await r.json();
-      txSig   = d.signature || d.txid || d.id || d.tx || null;
-      submitOk = r.ok;
-    } catch {}
-
-    // Fallback: RPC sendTransaction
-    if (!submitOk) {
+    // Try signAndSendTransaction
+    if (!walletDone && typeof provider.signAndSendTransaction === 'function') {
       try {
-        const r2 = await xerisRPC('sendTransaction', [txBase64]);
-        txSig    = typeof r2 === 'string' ? r2 : r2?.signature || r2?.txid || null;
-        submitOk = !!txSig;
-      } catch {}
+        const r = await provider.signAndSendTransaction(txObject);
+        txSig = typeof r === 'string' ? r : r?.signature || r?.txid || null;
+        walletDone = true;
+      } catch(e) {
+        if (/reject|cancel|denied/i.test(e.message||'')) throw new Error('cancelled');
+      }
+    }
+    // Try signMessage
+    if (!walletDone && typeof provider.signMessage === 'function') {
+      try {
+        const msg = new TextEncoder().encode(JSON.stringify(txObject));
+        await provider.signMessage(msg);
+        walletDone = true;
+        txSig = 'testnet-' + Date.now();
+      } catch(e) {
+        if (/reject|cancel|denied/i.test(e.message||'')) throw new Error('cancelled');
+      }
+    }
+    // Try request
+    if (!walletDone && typeof provider.request === 'function') {
+      try {
+        const r = await provider.request({ method: 'sendTransaction', params: [txObject] });
+        txSig = typeof r === 'string' ? r : r?.signature || null;
+        walletDone = true;
+      } catch(e) {
+        if (/reject|cancel|denied/i.test(e.message||'')) throw new Error('cancelled');
+      }
     }
 
-    // On testnet the node may accept but not return a sig — that's fine
-    if (!txSig) txSig = 'testnet-' + Math.random().toString(36).slice(2, 10);
+    if (!walletDone) { toast('Wallet signing failed — try again', 'error'); return; }
 
-    // ── Step 4: Confirm (poll up to 10s) ──
-    setStatus('Confirming transaction…');
-    let confirmed = false;
-    for (let i = 0; i < 5; i++) {
-      await new Promise(r => setTimeout(r, 1500));
-      try {
-        const tx = await xerisRPC('getTransaction', [txSig]);
-        if (tx) { confirmed = true; break; }
-      } catch {}
-    }
-
-    // ── Step 5: Register in game state ──
+    // Register with shared state — visible to ALL users
     addTickets(state.wallet.address, qty);
+    registerJoin(state.wallet.address, qty, txSig);
 
-    const shortSig = shortAddr(txSig);
-    const explorerUrl = `${CONFIG.API_URL}/v2/tx/${txSig}`;
-    toast(
-      `✓ ${qty} ticket${qty>1?'s':''} bought! Tx: ${shortSig}`,
-      'success', 7000
-    );
-    setStatus(`${qty} ticket${qty>1?'s':''} entered — draw in ${getCountdownText()}. Good luck! 🎰`);
+    toast('✓ ' + qty + ' ticket' + (qty>1?'s':'') + ' entered! Good luck! 🎰', 'success', 8000);
+    setStatus(qty + ' ticket' + (qty>1?'s':'') + ' entered — draw coming up!');
+    setTimeout(() => { if(typeof pollSharedState==='function') pollSharedState(); }, 2000);
+    setTimeout(() => { if(typeof refreshBalance==='function') refreshBalance(); }, 5000);
 
-    // ── Step 6: Refresh balance ──
-    await refreshBalance();
-
-  } catch (err) {
-    console.error('[solprize] buy error:', err);
-    toast(`Purchase failed: ${err.message}`, 'error');
-    setStatus('Transaction failed — try again.');
+  } catch(err) {
+    const m = err.message || '';
+    if (/cancel|reject/i.test(m)) toast('Transaction cancelled', 'info');
+    else toast('Purchase failed: ' + m, 'error', 7000);
+    setStatus('');
   } finally {
-    state.isBuying  = false;
-    btn.disabled    = false;
-    btn.textContent = 'BUY TICKETS';
+    state.isBuying = false; btn.disabled = false; btn.textContent = 'BUY TICKETS';
   }
 }
 
