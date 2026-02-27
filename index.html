@@ -1294,7 +1294,31 @@ function addTickets(address, count) {
   updateStats();
 }
 
-function runDraw() {
+async function runDraw() {
+  // POST to server — server picks winner AND auto-airdrops 95% prize
+  try {
+    const r = await fetch('/api/state', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({action:'draw', round: state.round})
+    });
+    const result = await r.json();
+    if (result.winner) {
+      const w = result.winner;
+      state.winners.unshift({address: w.address, amount: w.amount, round: w.round});
+      if (state.wallet && w.address === state.wallet.address) {
+        document.getElementById('winAmount').textContent = w.amount + ' XRS';
+        openModal('winModal');
+      }
+      toast('Round #' + state.round + ' winner: ' + w.address.slice(0,8) + '... won ' + w.amount + ' XRS — server airdropping prize!', 'success', 10000);
+    }
+  } catch(e) { console.warn('draw error:', e.message); }
+  state.round++;
+  state.players = [];
+  state.drawTarget = Date.now() + CONFIG.DRAW_INTERVAL * 1000;
+  renderPlayers(); renderWinners(); updateStats();
+}
+function runDraw_UNUSED() {
   const total = totalTickets();
   if (total === 0) return;
 
