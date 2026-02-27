@@ -1338,6 +1338,12 @@ function runDraw() {
 //  BUY FLOW
 // ══════════════════════════════════════════════
 async function handleBuy() {
+  // DEBUG v7.0
+  console.log('[xeris.fun] handleBuy called');
+  console.log('[xeris.fun] wallet:', state.wallet?.address);
+  console.log('[xeris.fun] window.xeris:', typeof window.xeris);
+  console.log('[xeris.fun] window.xrs:', typeof window.xrs);
+  console.log('[xeris.fun] window.solana:', typeof window.solana);
   if (!state.wallet) { toast('Connect your wallet first', 'error'); return; }
   if (state.isBuying) { toast('Purchase already in progress', 'info'); return; }
 
