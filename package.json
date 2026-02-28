@@ -1,1 +1,7 @@
-{"name":"xeris-fun","version":"3.0.0","private":true,"scripts":{"dev":"npx serve public -p 3000","deploy":"vercel --prod"},"license":"MIT","engines":{"node":">=18"}}
+{
+  "name": "xeris-fun",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=18" }
+}
