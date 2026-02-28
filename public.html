@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>XERIS.FUN — On-Chain Lottery</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0a0a0f;color:white;font-family:'Segoe UI',sans-serif;min-height:100vh}
+.ticker{background:#adff2f;color:#000;font-size:11px;font-weight:700;padding:6px 0;text-align:center;letter-spacing:2px}
+header{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid #1a1a2e}
+.logo{font-size:24px;font-weight:900;color:#adff2f;letter-spacing:2px}
+.logo span{color:#ff2d78}
+.net-badge{background:#1a1a2e;border:1px solid #adff2f;color:#adff2f;font-size:11px;padding:4px 10px;border-radius:20px}
+.container{max-width:480px;margin:0 auto;padding:20px}
+.card{background:#12121a;border:1px solid #1e1e2e;border-radius:16px;padding:24px;margin-bottom:16px}
+.card-title{font-size:11px;letter-spacing:3px;color:#555;margin-bottom:16px}
+.timer{text-align:center;margin-bottom:20px}
+.timer-val{font-size:48px;font-weight:900;color:#adff2f;font-variant-numeric:tabular-nums}
+.timer-label{font-size:11px;color:#555;letter-spacing:2px}
+.prize-pool{text-align:center;padding:16px 0;border-top:1px solid #1e1e2e;border-bottom:1px solid #1e1e2e;margin:16px 0}
+.prize-val{font-size:36px;font-weight:900;color:#ff2d78}
+.prize-label{font-size:11px;color:#555;letter-spacing:2px}
+.split{display:flex;justify-content:space-between;font-size:12px;color:#555;margin-top:8px}
+.split span{color:#adff2f}
+.addr-input{width:100%;background:#0a0a0f;border:1px solid #333;border-radius:10px;color:white;padding:12px;font-size:12px;margin-bottom:12px;outline:none}
+.addr-input:focus{border-color:#adff2f}
+.addr-input::placeholder{color:#444}
+.ticket-row{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.qty-btn{width:44px;height:44px;background:#1a1a2e;border:1px solid #333;border-radius:8px;color:white;font-size:20px;cursor:pointer;flex-shrink:0}
+.qty-input{flex:1;text-align:center;background:#0a0a0f;border:1px solid #333;border-radius:8px;color:#adff2f;font-size:24px;font-weight:700;height:44px}
+.price-tag{font-size:12px;color:#555;text-align:right;margin-bottom:16px}
+.price-tag span{color:#adff2f;font-weight:700}
+.buy-btn{width:100%;background:#adff2f;color:#000;font-weight:900;font-size:18px;padding:18px;border:none;border-radius:12px;cursor:pointer;letter-spacing:2px}
+.buy-btn:active{background:#8fd400}
+.players-list{max-height:200px;overflow-y:auto}
+.player-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #1a1a2e;font-size:13px}
+.player-addr{color:#888;font-family:monospace}
+.player-tickets{color:#adff2f;font-weight:700}
+.winners-list{max-height:200px;overflow-y:auto}
+.winner-row{padding:10px 0;border-bottom:1px solid #1a1a2e}
+.winner-addr{font-family:monospace;font-size:12px;color:#adff2f}
+.winner-amount{font-size:13px;color:#ff2d78;font-weight:700}
+.winner-round{font-size:11px;color:#555}
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);padding:12px 24px;border-radius:10px;font-size:14px;font-weight:600;z-index:9998;animation:fadeIn .3s;max-width:90vw;text-align:center}
+.toast.success{background:#adff2f;color:#000}
+.toast.error{background:#ff2d78;color:#fff}
+.toast.info{background:#1a1aff;color:#fff}
+@keyframes fadeIn{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.92);z-index:9999;display:none;align-items:center;justify-content:center;padding:16px}
+.modal-box{background:#12121a;border:2px solid #adff2f;border-radius:16px;padding:28px;max-width:400px;width:100%;text-align:center}
+.modal-step{font-size:10px;color:#555;letter-spacing:3px;margin-bottom:4px}
+.modal-title{font-size:22px;color:#adff2f;font-weight:900;margin-bottom:20px}
+.modal-amount{font-size:44px;font-weight:900;color:#adff2f;margin-bottom:4px}
+.modal-sub{font-size:12px;color:#555;margin-bottom:16px}
+.modal-addr{font-family:monospace;font-size:11px;color:#adff2f;background:#0a0a0f;border:1px solid #333;padding:14px;border-radius:8px;word-break:break-all;cursor:pointer;margin-bottom:6px}
+.modal-copy-hint{font-size:11px;color:#555;margin-bottom:24px}
+.modal-confirm-btn{width:100%;background:#adff2f;color:#000;font-weight:900;font-size:16px;padding:16px;border:none;border-radius:10px;cursor:pointer;margin-bottom:10px;letter-spacing:1px}
+.modal-cancel-btn{width:100%;background:transparent;color:#555;font-size:13px;padding:10px;border:1px solid #333;border-radius:8px;cursor:pointer}
+</style>
+</head>
+<body>
+
+<div class="ticker">◆ XERIS.FUN — DECENTRALIZED LOTTERY ON XERIS CHAIN ◆ 10 XRS / TICKET ◆ 95% TO WINNER ◆</div>
+
+<header>
+  <div class="logo">XERIS<span>.</span>FUN</div>
+  <div class="net-badge">◉ XERIS TESTNET</div>
+</header>
+
+<div class="container">
+
+  <!-- ROUND TIMER -->
+  <div class="card">
+    <div class="card-title">ROUND #<span id="roundNum">-</span></div>
+    <div class="timer">
+      <div class="timer-val" id="timerVal">--:--</div>
+      <div class="timer-label">UNTIL DRAW</div>
+    </div>
+    <div class="prize-pool">
+      <div class="prize-label">PRIZE POOL</div>
+      <div class="prize-val"><span id="prizePool">0.00</span> XRS</div>
+      <div class="split">
+        <div>Winner gets <span id="winnerSplit">0.00</span> XRS</div>
+        <div>Treasury <span id="treasurySplit">0.00</span> XRS</div>
+      </div>
+    </div>
+    <div style="text-align:center;font-size:12px;color:#555">
+      <span id="playerCount">0</span> players · <span id="ticketCount2">0</span> tickets sold
+    </div>
+  </div>
+
+  <!-- BUY TICKETS -->
+  <div class="card">
+    <div class="card-title">BUY TICKETS</div>
+    <input id="playerName" class="addr-input" placeholder="Your username (e.g. @kings_24)" autocomplete="off" style="margin-bottom:8px" />
+    <input id="playerAddr" class="addr-input" placeholder="Your XRS wallet address (to receive winnings)" autocomplete="off" spellcheck="false" />
+    <div class="ticket-row">
+      <button class="qty-btn" onclick="changeQty(-1)">−</button>
+      <input id="qtyInput" class="qty-input" type="number" value="1" min="1" max="100" readonly />
+      <button class="qty-btn" onclick="changeQty(1)">+</button>
+    </div>
+    <div class="price-tag">Total: <span id="totalCost">10</span> XRS · 10 XRS/ticket</div>
+    <button class="buy-btn" onclick="handleBuy()">BUY TICKETS</button>
+  </div>
+
+  <!-- PLAYERS -->
+  <div class="card">
+    <div class="card-title">CURRENT PLAYERS</div>
+    <div class="players-list" id="playersList">
+      <div style="color:#555;font-size:13px;text-align:center;padding:20px">No players yet — be first!</div>
+    </div>
+  </div>
+
+  <!-- WINNERS -->
+  <div class="card">
+    <div class="card-title">RECENT WINNERS</div>
+    <div class="winners-list" id="winnersList">
+      <div style="color:#555;font-size:13px;text-align:center;padding:20px">No winners yet</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ESCROW PAYMENT MODAL -->
+<div class="modal-overlay" id="escrowModal">
+  <div class="modal-box">
+    <div class="modal-step">STEP 1 OF 2</div>
+    <div class="modal-title">SEND PAYMENT</div>
+    <div style="color:#888;font-size:13px;margin-bottom:4px">Open Xeris wallet and send exactly</div>
+    <div class="modal-amount" id="modalAmount">-</div>
+    <div class="modal-sub" id="modalSub">- tickets × 10 XRS</div>
+    <div style="color:#888;font-size:12px;margin-bottom:8px">to this escrow address:</div>
+    <div class="modal-addr" id="modalAddr" onclick="copyEscrow()">-</div>
+    <div class="modal-copy-hint">👆 Tap to copy · Send from Xeris wallet app</div>
+    <div class="modal-step">STEP 2 OF 2 — AFTER SENDING</div>
+    <br>
+    <button class="modal-confirm-btn" onclick="confirmPayment()">✓ I SENT THE XRS</button>
+    <button class="modal-cancel-btn" onclick="closeModal()">Cancel</button>
+  </div>
+</div>
+
+<script>
+const TICKET_PRICE = 10;
+const DRAW_INTERVAL = 5 * 60 * 1000;
+const EPOCH_START = 1740535200000;
+const ESCROW_FALLBACK = '6G4GroMrVsGjd3xhywxfzXDg7vPn1V2Mky4B3qsXVGHo';
+
+let state = { round:1, players:[], winners:[], drawTarget:0, escrowAddress: ESCROW_FALLBACK };
+let _pendingQty = 1;
+let _pendingAddr = '';
+let _pendingName = '';
+
+function getCurrentRound(){ return Math.floor((Date.now()-EPOCH_START)/DRAW_INTERVAL)+1; }
+function getRoundEnd(r){ return EPOCH_START + r*DRAW_INTERVAL; }
+
+function changeQty(d){
+  const el = document.getElementById('qtyInput');
+  let v = parseInt(el.value)||1;
+  v = Math.max(1, Math.min(100, v+d));
+  el.value = v;
+  document.getElementById('totalCost').textContent = v * TICKET_PRICE;
+}
+
+function toast(msg, type='info', ms=4000){
+  document.querySelectorAll('.toast').forEach(e=>e.remove());
+  const t = document.createElement('div');
+  t.className = 'toast '+type;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), ms);
+}
+
+function shortAddr(a){ return a ? a.slice(0,6)+'...'+a.slice(-4) : ''; }
+
+function handleBuy(){
+  const addr = document.getElementById('playerAddr').value.trim();
+  if(!addr || addr.length < 32){
+    toast('Enter your XRS wallet address first','error'); 
+    document.getElementById('playerAddr').focus();
+    return;
+  }
+  const qty = parseInt(document.getElementById('qtyInput').value)||1;
+  _pendingQty = qty;
+  _pendingAddr = addr;
+  _pendingName = document.getElementById('playerName').value.trim().replace('@','');
+  const cost = qty * TICKET_PRICE;
+  const escrow = state.escrowAddress || ESCROW_FALLBACK;
+  document.getElementById('modalAmount').textContent = cost + ' XRS';
+  document.getElementById('modalSub').textContent = qty + ' ticket' + (qty>1?'s':'') + ' × 10 XRS';
+  document.getElementById('modalAddr').textContent = escrow;
+  document.getElementById('escrowModal').style.display = 'flex';
+}
+
+function copyEscrow(){
+  const addr = document.getElementById('modalAddr').textContent;
+  if(navigator.clipboard) navigator.clipboard.writeText(addr);
+  toast('Address copied!','success',2000);
+}
+
+function closeModal(){
+  document.getElementById('escrowModal').style.display = 'none';
+}
+
+async function confirmPayment(){
+  closeModal();
+  try {
+    const r = await fetch('/api/state',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({action:'join', address:_pendingAddr, tickets:_pendingQty, username:_pendingName, txSig:'pay-'+Date.now()})
+    });
+    const d = await r.json();
+    if(d.ok){
+      toast('✓ '+_pendingQty+' ticket'+ (_pendingQty>1?'s':'')+' registered! Good luck! 🎰','success',8000);
+      pollState();
+    } else {
+      toast('Error: '+(d.error||'Try again'),'error');
+    }
+  } catch(e){ toast('Network error — try again','error'); }
+}
+
+function renderPlayers(players){
+  const el = document.getElementById('playersList');
+  if(!players||!players.length){ el.innerHTML='<div style="color:#555;font-size:13px;text-align:center;padding:20px">No players yet</div>'; return; }
+  el.innerHTML = players.map(p=>`
+    <div class="player-row">
+      <div class="player-addr">${p.username ? "@"+p.username : shortAddr(p.address)}</div>
+      <div class="player-tickets">${p.tickets} ticket${p.tickets>1?'s':''}</div>
+    </div>`).join('');
+}
+
+function renderWinners(winners){
+  const el = document.getElementById('winnersList');
+  if(!winners||!winners.length){ el.innerHTML='<div style="color:#555;font-size:13px;text-align:center;padding:20px">No winners yet</div>'; return; }
+  el.innerHTML = winners.map(w=>`
+    <div class="winner-row">
+      <div class="winner-addr">${shortAddr(w.address)}</div>
+      <div class="winner-amount">+${w.amount} XRS</div>
+      <div class="winner-round">Round #${w.round}</div>
+    </div>`).join('');
+}
+
+function updateStats(players){
+  const total = players.reduce((s,p)=>s+p.tickets,0);
+  const pool = total * TICKET_PRICE;
+  document.getElementById('playerCount').textContent = players.length;
+  document.getElementById('ticketCount2').textContent = total;
+  document.getElementById('prizePool').textContent = pool.toFixed(2);
+  document.getElementById('winnerSplit').textContent = (pool*0.95).toFixed(2);
+  document.getElementById('treasurySplit').textContent = (pool*0.05).toFixed(2);
+}
+
+function updateTimer(){
+  const now = Date.now();
+  const left = Math.max(0, state.drawTarget - now);
+  const m = Math.floor(left/60000);
+  const s = Math.floor((left%60000)/1000);
+  document.getElementById('timerVal').textContent = String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+  if(left===0) triggerDraw();
+}
+
+async function triggerDraw(){
+  try {
+    const r = await fetch('/api/state',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'draw',round:state.round})});
+    const d = await r.json();
+    if(d.winner){
+      toast('🎰 Winner: '+shortAddr(d.winner.address)+' won '+d.winner.amount+' XRS — airdropping now!','success',12000);
+      pollState();
+    }
+  } catch(e){}
+}
+
+async function pollState(){
+  try {
+    const r = await fetch('/api/state');
+    const d = await r.json();
+    if(d.ok){
+      state.round = d.round;
+      state.drawTarget = d.drawTarget;
+      state.players = d.players||[];
+      state.winners = d.winners||[];
+      if(d.escrowAddress) state.escrowAddress = d.escrowAddress;
+      document.getElementById('roundNum').textContent = d.round;
+      renderPlayers(state.players);
+      renderWinners(state.winners);
+      updateStats(state.players);
+    }
+  } catch(e){}
+}
+
+// Start
+pollState();
+setInterval(pollState, 10000);
+setInterval(updateTimer, 1000);
+</script>
+</body>
+</html>

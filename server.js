@@ -68,8 +68,8 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') { res.writeHead(200); res.end(); return; }
 
   // Serve HTML
-  if (req.url === '/' || req.url === '/index.html') {
-    const html = fs.readFileSync(path.join(__dirname, 'app.html'), 'utf8');
+  if (req.url === '/' || req.url === '/public.html') {
+    const html = fs.readFileSync(path.join(__dirname, 'public.html'), 'utf8');
     res.writeHead(200, {'Content-Type':'text/html','Cache-Control':'no-cache,no-store'});
     res.end(html); return;
   }
