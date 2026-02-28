@@ -1,49 +1,32 @@
-// ═══════════════════════════════════════════════════════
-//  XERIS.FUN — Shared Game State API  (Vercel serverless)
-//  /api/state — single source of truth for all players
-//
-//  GET  /api/state         → current round, players, winners
-//  POST /api/state {action:'join'}  → register a ticket purchase
-//  POST /api/state {action:'draw'}  → trigger round draw
-// ═══════════════════════════════════════════════════════
+const NODE_IP          = '138.197.116.81';
+const NET_PORT         = 56001;
+const TICKET_PRICE     = 10;
+const DRAW_INTERVAL    = 5 * 60;
+const EPOCH_START      = 1740535200000;
+const WINNER_SHARE     = 0.95;
+const TREASURY_SHARE   = 0.05;
+const MAX_TICKETS      = 100;
+const LAMPORTS_PER_XRS = 1000000000;
 
-const TICKET_PRICE   = 10;
-const DRAW_INTERVAL  = 5 * 60;       // seconds
-const EPOCH_START    = 1740441600000; // Feb 25 2026 00:00:00 UTC
-const WINNER_SHARE   = 0.95;
-const TREASURY_SHARE = 0.05;
-const MAX_TICKETS    = 100;
+const TREASURY_ADDRESS = process.env.TREASURY_ADDRESS || '6G4GroMrVsGjd3xhywxfzXDg7vPn1V2Mky4B3qsXVGHo';
+const ESCROW_ADDRESS   = process.env.ESCROW_ADDRESS   || '6G4GroMrVsGjd3xhywxfzXDg7vPn1V2Mky4B3qsXVGHo';
 
-// ── In-memory shared state ──
-// Persists across warm Vercel invocations (good enough for testnet)
-const sharedState = {
-  rounds:  {},   // { [roundNum]: RoundData }
-  winners: [],   // last 50 winners across all rounds
-};
+const S = { rounds: {}, winners: [] };
 
 function getCurrentRound() {
   return Math.floor((Date.now() - EPOCH_START) / (DRAW_INTERVAL * 1000)) + 1;
 }
-function getRoundEnd(round) {
-  return EPOCH_START + round * DRAW_INTERVAL * 1000;
+function getRoundEnd(r) {
+  return EPOCH_START + r * DRAW_INTERVAL * 1000;
 }
-
-function getOrCreateRound(round) {
-  if (!sharedState.rounds[round]) {
-    sharedState.rounds[round] = {
-      players: [],   // [{ address, tickets, txSigs[] }]
-      drawTarget: getRoundEnd(round),
-      drawn: false,
-      winner: null,
-    };
-    // Prune old rounds — keep last 20
-    const keys = Object.keys(sharedState.rounds).map(Number).sort((a, b) => b - a);
-    keys.slice(20).forEach(k => delete sharedState.rounds[k]);
+function getOrCreateRound(r) {
+  if (!S.rounds[r]) {
+    S.rounds[r] = { players: [], drawn: false, winner: null, payoutSent: false };
+    const keys = Object.keys(S.rounds).map(Number).sort((a,b)=>b-a);
+    keys.slice(20).forEach(k => delete S.rounds[k]);
   }
-  return sharedState.rounds[round];
+  return S.rounds[r];
 }
-
-// Deterministic integer hash — same seed → same number every time
 function deterministicRoll(seed, max) {
   let h = 0x811c9dc5;
   for (let i = 0; i < seed.length; i++) {
@@ -53,133 +36,125 @@ function deterministicRoll(seed, max) {
   return h % max;
 }
 
-export default function handler(req, res) {
-  // CORS — allow the Vercel frontend to call this
+async function sendAirdrop(toAddress, amountXRS, reason) {
+  const lamports = Math.floor(amountXRS * LAMPORTS_PER_XRS);
+  const url = `http://${NODE_IP}:${NET_PORT}/airdrop/${toAddress}/${lamports}`;
+  console.log(`[PAYOUT] Airdropping ${amountXRS} XRS to ${toAddress.slice(0,8)}... reason=${reason}`);
+  try {
+    const resp = await fetch(url, { method: 'POST', signal: AbortSignal.timeout(15000) });
+    const text = await resp.text();
+    console.log(`[PAYOUT] Response: ${text}`);
+    return { ok: true, method: 'airdrop', response: text };
+  } catch (e) {
+    console.log(`[PAYOUT] Error: ${e.message}`);
+    return { ok: false, error: e.message };
+  }
+}
+
+async function executePayout(rd, w) {
+  if (rd.payoutSent) return { ok: true, alreadySent: true };
+  rd.payoutSent = true;
+  const r1 = await sendAirdrop(w.address, w.amount, `win-round-${w.round}`);
+  const r2 = w.treasury > 0
+    ? await sendAirdrop(TREASURY_ADDRESS, w.treasury, `treasury-round-${w.round}`)
+    : { ok: true };
+  if (!r1.ok) rd.payoutSent = false;
+  return { winner: r1, treasury: r2 };
+}
+
+export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
 
-  const round     = getCurrentRound();
-  const roundData = getOrCreateRound(round);
+  const round = getCurrentRound();
+  const rd    = getOrCreateRound(round);
 
-  // ── GET: return full shared game state ──
   if (req.method === 'GET') {
     return res.status(200).json({
-      ok:         true,
-      round,
-      drawTarget: getRoundEnd(round),
-      players:    roundData.players.map(p => ({
-        address: p.address,
-        tickets: p.tickets,
-      })),
-      drawn:      roundData.drawn,
-      winner:     roundData.winner,
-      winners:    sharedState.winners.slice(0, 20),
-      serverTime: Date.now(),
+      ok: true, round,
+      drawTarget:    getRoundEnd(round),
+      escrowAddress: ESCROW_ADDRESS,
+      players:       rd.players.map(p => ({ address: p.address, tickets: p.tickets })),
+      drawn:         rd.drawn,
+      winner:        rd.winner,
+      winners:       S.winners.slice(0, 20),
+      serverTime:    Date.now(),
     });
   }
 
-  // ── POST: actions ──
   if (req.method === 'POST') {
-    const body   = req.body || {};
-    const action = body.action;
+    const { action, address, tickets, txSig, round: clientRound } = req.body || {};
 
-    // ── JOIN: register a confirmed ticket purchase ──
     if (action === 'join') {
-      const { address, tickets, txSig } = body;
-
-      // Validate
-      if (!address || typeof address !== 'string' || !/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address)) {
+      if (!address || !/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address))
         return res.status(400).json({ ok: false, error: 'Invalid address' });
-      }
       const qty = parseInt(tickets, 10);
-      if (isNaN(qty) || qty < 1 || qty > MAX_TICKETS) {
+      if (isNaN(qty) || qty < 1 || qty > MAX_TICKETS)
         return res.status(400).json({ ok: false, error: 'Invalid ticket count' });
-      }
-      if (roundData.drawn) {
-        return res.status(400).json({ ok: false, error: 'Round already drawn — wait for next round' });
-      }
-
-      // Deduplicate by txSig — prevent double-registering the same tx
+      if (rd.drawn)
+        return res.status(400).json({ ok: false, error: 'Round drawn - wait for next' });
       if (txSig) {
-        const allSigs = roundData.players.flatMap(p => p.txSigs || []);
-        if (allSigs.includes(txSig)) {
-          return res.status(200).json({ ok: true, duplicate: true, players: roundData.players.map(p => ({ address: p.address, tickets: p.tickets })) });
-        }
+        const allSigs = rd.players.flatMap(p => p.txSigs || []);
+        if (allSigs.includes(txSig))
+          return res.status(200).json({ ok: true, duplicate: true });
       }
-
-      // Add or update player
-      const existing = roundData.players.find(p => p.address === address);
-      if (existing) {
-        existing.tickets += qty;
-        if (txSig) existing.txSigs = [...(existing.txSigs || []), txSig];
+      const ex = rd.players.find(p => p.address === address);
+      if (ex) {
+        ex.tickets += qty;
+        if (txSig) ex.txSigs = [...(ex.txSigs||[]), txSig];
       } else {
-        roundData.players.push({ address, tickets: qty, txSigs: txSig ? [txSig] : [] });
+        rd.players.push({ address, tickets: qty, txSigs: txSig ? [txSig] : [] });
       }
-
-      console.log(`[state] Round #${round} join: ${address.slice(0,8)}… +${qty} tickets. Total players: ${roundData.players.length}`);
-
+      console.log(`[JOIN] Round #${round}: ${address.slice(0,8)}... +${qty} tickets`);
       return res.status(200).json({
-        ok: true,
-        round,
-        players: roundData.players.map(p => ({ address: p.address, tickets: p.tickets })),
+        ok: true, round,
+        players: rd.players.map(p => ({ address: p.address, tickets: p.tickets })),
       });
     }
 
-    // ── DRAW: pick winner for completed round ──
     if (action === 'draw') {
-      const clientRound = parseInt(body.round, 10) || round;
-
-      // Allow drawing the just-completed round
-      const drawRound = clientRound < round ? clientRound : round;
-      const rd = getOrCreateRound(drawRound);
-
-      if (rd.drawn) {
-        return res.status(200).json({ ok: true, alreadyDrawn: true, winner: rd.winner, round: drawRound });
+      const drawRound = parseInt(clientRound,10) || round;
+      const drd = getOrCreateRound(drawRound);
+      if (drd.drawn) {
+        if (drd.winner && !drd.payoutSent) executePayout(drd, drd.winner).catch(console.error);
+        return res.status(200).json({ ok: true, alreadyDrawn: true, winner: drd.winner, round: drawRound });
       }
-      if (rd.players.length === 0) {
+      if (!drd.players.length)
         return res.status(200).json({ ok: false, error: 'No players this round' });
-      }
 
-      // Pick winner deterministically
-      const total = rd.players.reduce((s, p) => s + p.tickets, 0);
-      const seed  = `round-${drawRound}-${rd.players.map(p => `${p.address}:${p.tickets}`).join('|')}`;
+      const total = drd.players.reduce((s,p) => s+p.tickets, 0);
+      const seed  = `round-${drawRound}-${drd.players.map(p=>`${p.address}:${p.tickets}`).join('|')}`;
       const roll  = deterministicRoll(seed, total);
-
-      let cum = 0, winner = null;
-      for (const p of rd.players) {
-        cum += p.tickets;
-        if (roll < cum) { winner = p; break; }
-      }
-      if (!winner) winner = rd.players[rd.players.length - 1];
+      let cum=0, winner=null;
+      for (const p of drd.players) { cum+=p.tickets; if(roll<cum){winner=p;break;} }
+      if (!winner) winner = drd.players[drd.players.length-1];
 
       const totalPool   = total * TICKET_PRICE;
       const winnerPrize = parseFloat((totalPool * WINNER_SHARE).toFixed(4));
       const treasuryCut = parseFloat((totalPool * TREASURY_SHARE).toFixed(4));
 
       const winnerRecord = {
-        address:   winner.address,
-        amount:    winnerPrize,
-        treasury:  treasuryCut,
-        totalPool,
-        round:     drawRound,
-        seed,
-        drawnAt:   Date.now(),
+        address: winner.address, amount: winnerPrize, treasury: treasuryCut,
+        totalPool, tickets: winner.tickets, totalTickets: total,
+        round: drawRound, seed, drawnAt: Date.now(), payoutStatus: 'pending',
       };
 
-      rd.drawn  = true;
-      rd.winner = winnerRecord;
-      sharedState.winners.unshift(winnerRecord);
-      if (sharedState.winners.length > 50) sharedState.winners.length = 50;
+      drd.drawn=true; drd.winner=winnerRecord;
+      S.winners.unshift(winnerRecord);
+      if (S.winners.length>50) S.winners.length=50;
 
-      console.log(`[state] Round #${drawRound} drawn! Winner: ${winner.address.slice(0,8)}… — ${winnerPrize} XRS`);
+      console.log(`[DRAW] Round #${drawRound} winner: ${winner.address.slice(0,8)}... ${winnerPrize} XRS`);
+
+      executePayout(drd, winnerRecord)
+        .then(r => { winnerRecord.payoutStatus = r.winner?.ok ? 'sent' : 'failed'; })
+        .catch(e => { winnerRecord.payoutStatus = 'error'; });
 
       return res.status(200).json({ ok: true, winner: winnerRecord, round: drawRound });
     }
 
     return res.status(400).json({ ok: false, error: 'Unknown action' });
   }
-
   res.status(405).end();
 }
