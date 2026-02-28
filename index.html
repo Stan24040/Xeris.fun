@@ -757,7 +757,7 @@
   <a href="#" class="logo" aria-label="Solprize home">SOL<span>PRIZE</span></a>
   <div class="header-right">
     <span class="net-pill" id="netPill">⬡ XERIS TESTNET</span>
-    <button id="connectBtn" aria-haspopup="dialog">CONNECT WALLET</button>
+    <input id="playerAddr" placeholder="Your XRS wallet address" style="font-size:12px;padding:8px 12px;border-radius:8px;border:1px solid #adff2f;background:#0a0a0f;color:white;width:200px;" />
   </div>
 </header>
 
@@ -817,7 +817,7 @@
         <span class="total-amount" id="totalCost">0.01 XRS</span>
       </div>
       <button id="buyBtn" disabled aria-label="Buy tickets">
-        CONNECT WALLET FIRST
+        BUY TICKETS
       </button>
       <a href="#" id="faucetLink" class="faucet-link" aria-label="Get free testnet XRS from faucet">
         ↗ Need XRS? Get from testnet faucet
@@ -1154,7 +1154,7 @@ function onWalletDisconnected() {
   btn.textContent = 'CONNECT WALLET';
   btn.classList.remove('connected');
   document.getElementById('buyBtn').disabled = true;
-  document.getElementById('buyBtn').textContent = 'CONNECT WALLET FIRST';
+  document.getElementById('buyBtn').textContent = 'BUY TICKETS';
   setStatus('');
   toast('Wallet disconnected', 'info');
 }
@@ -1362,69 +1362,74 @@ function runDraw_UNUSED() {
 //  BUY FLOW
 // ══════════════════════════════════════════════
 async function handleBuy() {
-  if (!state.wallet) { toast('Connect your wallet first', 'error'); return; }
+  const addrInput = document.getElementById('playerAddr');
+  const playerAddress = (addrInput && addrInput.value.trim()) || '';
+  if (!playerAddress || playerAddress.length < 32) {
+    toast('Enter your XRS wallet address above first', 'error', 5000);
+    if (addrInput) addrInput.focus();
+    return;
+  }
 
   const qty = parseInt(document.getElementById('ticketCount').value) || 1;
   const costXRS = qty * 10;
-  const escrow = state.escrowAddress || '6G4GroMrVsGjd3xhywxfzXDg7vPn1V2Mky4B3qsXVGHo';
+  const escrow = (window._escrowAddress) || '6G4GroMrVsGjd3xhywxfzXDg7vPn1V2Mky4B3qsXVGHo';
 
-  // Show escrow payment modal
+  // Create/show escrow popup
   let modal = document.getElementById('escrowModal');
   if (!modal) {
     modal = document.createElement('div');
     modal.id = 'escrowModal';
-    modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
-    modal.innerHTML = `
-      <div style="background:#12121a;border:1px solid #adff2f;border-radius:16px;padding:24px;max-width:400px;width:100%;text-align:center;">
-        <div style="font-family:monospace;font-size:18px;color:#adff2f;font-weight:bold;margin-bottom:16px;">SEND PAYMENT</div>
-        <div style="color:#888;font-size:13px;margin-bottom:8px;">Send exactly</div>
-        <div id="escrowAmount" style="font-size:32px;font-weight:bold;color:#adff2f;margin-bottom:16px;"></div>
-        <div style="color:#888;font-size:13px;margin-bottom:8px;">to this address:</div>
-        <div id="escrowAddr" style="font-family:monospace;font-size:11px;color:white;background:#0a0a0f;padding:12px;border-radius:8px;word-break:break-all;margin-bottom:8px;cursor:pointer;" onclick="navigator.clipboard&&navigator.clipboard.writeText(this.textContent);toast('Address copied!','success')"></div>
-        <div style="color:#555;font-size:11px;margin-bottom:20px;">Tap address to copy · Open Xeris wallet to send</div>
-        <button onclick="confirmEscrowPayment()" style="background:#adff2f;color:#000;font-weight:bold;padding:14px;border-radius:10px;border:none;width:100%;font-size:16px;cursor:pointer;margin-bottom:8px;">I SENT THE XRS ✓</button>
-        <button onclick="document.getElementById('escrowModal').style.display='none'" style="background:#1a1a25;color:#888;padding:12px;border-radius:10px;border:1px solid #333;width:100%;font-size:14px;cursor:pointer;">Cancel</button>
-      </div>`;
+    modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.92);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
     document.body.appendChild(modal);
   }
-
+  modal.innerHTML = `
+    <div style="background:#12121a;border:2px solid #adff2f;border-radius:16px;padding:24px;max-width:380px;width:100%;text-align:center;">
+      <div style="font-size:11px;color:#555;letter-spacing:2px;margin-bottom:4px;">STEP 1</div>
+      <div style="font-size:20px;color:#adff2f;font-weight:bold;margin-bottom:16px;">SEND PAYMENT</div>
+      <div style="color:#888;font-size:13px;margin-bottom:4px;">Open your Xeris wallet and send</div>
+      <div style="font-size:40px;font-weight:900;color:#adff2f;margin-bottom:4px;">${costXRS} XRS</div>
+      <div style="color:#555;font-size:12px;margin-bottom:12px;">${qty} ticket${qty>1?'s':''} × 10 XRS</div>
+      <div style="color:#888;font-size:12px;margin-bottom:6px;">to this escrow address:</div>
+      <div id="escrowAddrBox" style="font-family:monospace;font-size:11px;color:#adff2f;background:#0a0a0f;border:1px solid #333;padding:14px;border-radius:8px;word-break:break-all;margin-bottom:6px;cursor:pointer;">${escrow}</div>
+      <div style="color:#555;font-size:11px;margin-bottom:20px;">👆 Tap to copy address</div>
+      <div style="font-size:11px;color:#555;letter-spacing:2px;margin-bottom:8px;">STEP 2 — AFTER SENDING</div>
+      <button id="iSentBtn" style="background:#adff2f;color:#000;font-weight:900;padding:16px;border-radius:10px;border:none;width:100%;font-size:16px;cursor:pointer;margin-bottom:10px;letter-spacing:1px;">✓ I SENT THE XRS</button>
+      <button onclick="document.getElementById('escrowModal').remove()" style="background:transparent;color:#555;padding:10px;border-radius:8px;border:1px solid #333;width:100%;font-size:13px;cursor:pointer;">Cancel</button>
+    </div>`;
   modal.style.display = 'flex';
-  document.getElementById('escrowAmount').textContent = costXRS + ' XRS';
-  document.getElementById('escrowAddr').textContent = escrow;
-  document.getElementById('escrowAddr').dataset.qty = qty;
-  document.getElementById('escrowAddr').dataset.cost = costXRS;
+
+  // Copy on tap
+  document.getElementById('escrowAddrBox').onclick = function() {
+    navigator.clipboard && navigator.clipboard.writeText(escrow);
+    toast('Address copied!', 'success', 2000);
+  };
+
+  // Store for confirm
+  modal._playerAddress = playerAddress;
+  modal._qty = qty;
+
+  document.getElementById('iSentBtn').onclick = async function() {
+    const addr = document.getElementById('escrowModal')._playerAddress;
+    const q    = document.getElementById('escrowModal')._qty;
+    document.getElementById('escrowModal').remove();
+    try {
+      const r = await fetch('/api/state', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({action:'join', address: addr, tickets: q, txSig: 'pay-'+Date.now()})
+      });
+      const d = await r.json();
+      if (d.ok) {
+        toast('✓ ' + q + ' ticket' + (q>1?'s':'') + ' registered for ' + addr.slice(0,8) + '...! Good luck! 🎰', 'success', 8000);
+        setTimeout(()=>{ if(typeof pollSharedState==='function') pollSharedState(); }, 1000);
+      } else {
+        toast('Error: ' + (d.error||'Try again'), 'error');
+      }
+    } catch(e) { toast('Network error — try again', 'error'); }
+  };
 }
 
-async function confirmEscrowPayment() {
-  const addrEl = document.getElementById('escrowAddr');
-  const qty = parseInt(addrEl.dataset.qty) || 1;
-  document.getElementById('escrowModal').style.display = 'none';
-
-  // Register tickets on server
-  try {
-    const r = await fetch('/api/state', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({
-        action: 'join',
-        address: state.wallet.address,
-        tickets: qty,
-        txSig: 'manual-' + Date.now()
-      })
-    });
-    const data = await r.json();
-    if (data.ok) {
-      toast('✓ ' + qty + ' ticket' + (qty > 1 ? 's' : '') + ' registered! Good luck! 🎰', 'success', 8000);
-      if (typeof pollSharedState === 'function') setTimeout(pollSharedState, 1000);
-    } else {
-      toast('Error: ' + (data.error || 'Try again'), 'error');
-    }
-  } catch(e) {
-    toast('Network error — try again', 'error');
-  }
-}
-
-async function handleBuy_OLD() {
+async function handleBuy_OLDasync function handleBuy_OLD() {
   // DEBUG v7.0
   console.log('[xeris.fun] handleBuy called');
   console.log('[xeris.fun] wallet:', state.wallet?.address);
@@ -1764,6 +1769,7 @@ function init() {
   toast('⬡ Connected to Xeris testnet', 'info', 3000);
 }
 
+fetch('/api/state').then(r=>r.json()).then(d=>{ if(d.escrowAddress) window._escrowAddress=d.escrowAddress; }).catch(()=>{});
 document.addEventListener('DOMContentLoaded', init);
 </script>
 
