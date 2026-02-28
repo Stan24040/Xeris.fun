@@ -1362,6 +1362,69 @@ function runDraw_UNUSED() {
 //  BUY FLOW
 // ══════════════════════════════════════════════
 async function handleBuy() {
+  if (!state.wallet) { toast('Connect your wallet first', 'error'); return; }
+
+  const qty = parseInt(document.getElementById('ticketCount').value) || 1;
+  const costXRS = qty * 10;
+  const escrow = state.escrowAddress || '6G4GroMrVsGjd3xhywxfzXDg7vPn1V2Mky4B3qsXVGHo';
+
+  // Show escrow payment modal
+  let modal = document.getElementById('escrowModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'escrowModal';
+    modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+    modal.innerHTML = `
+      <div style="background:#12121a;border:1px solid #adff2f;border-radius:16px;padding:24px;max-width:400px;width:100%;text-align:center;">
+        <div style="font-family:monospace;font-size:18px;color:#adff2f;font-weight:bold;margin-bottom:16px;">SEND PAYMENT</div>
+        <div style="color:#888;font-size:13px;margin-bottom:8px;">Send exactly</div>
+        <div id="escrowAmount" style="font-size:32px;font-weight:bold;color:#adff2f;margin-bottom:16px;"></div>
+        <div style="color:#888;font-size:13px;margin-bottom:8px;">to this address:</div>
+        <div id="escrowAddr" style="font-family:monospace;font-size:11px;color:white;background:#0a0a0f;padding:12px;border-radius:8px;word-break:break-all;margin-bottom:8px;cursor:pointer;" onclick="navigator.clipboard&&navigator.clipboard.writeText(this.textContent);toast('Address copied!','success')"></div>
+        <div style="color:#555;font-size:11px;margin-bottom:20px;">Tap address to copy · Open Xeris wallet to send</div>
+        <button onclick="confirmEscrowPayment()" style="background:#adff2f;color:#000;font-weight:bold;padding:14px;border-radius:10px;border:none;width:100%;font-size:16px;cursor:pointer;margin-bottom:8px;">I SENT THE XRS ✓</button>
+        <button onclick="document.getElementById('escrowModal').style.display='none'" style="background:#1a1a25;color:#888;padding:12px;border-radius:10px;border:1px solid #333;width:100%;font-size:14px;cursor:pointer;">Cancel</button>
+      </div>`;
+    document.body.appendChild(modal);
+  }
+
+  modal.style.display = 'flex';
+  document.getElementById('escrowAmount').textContent = costXRS + ' XRS';
+  document.getElementById('escrowAddr').textContent = escrow;
+  document.getElementById('escrowAddr').dataset.qty = qty;
+  document.getElementById('escrowAddr').dataset.cost = costXRS;
+}
+
+async function confirmEscrowPayment() {
+  const addrEl = document.getElementById('escrowAddr');
+  const qty = parseInt(addrEl.dataset.qty) || 1;
+  document.getElementById('escrowModal').style.display = 'none';
+
+  // Register tickets on server
+  try {
+    const r = await fetch('/api/state', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        action: 'join',
+        address: state.wallet.address,
+        tickets: qty,
+        txSig: 'manual-' + Date.now()
+      })
+    });
+    const data = await r.json();
+    if (data.ok) {
+      toast('✓ ' + qty + ' ticket' + (qty > 1 ? 's' : '') + ' registered! Good luck! 🎰', 'success', 8000);
+      if (typeof pollSharedState === 'function') setTimeout(pollSharedState, 1000);
+    } else {
+      toast('Error: ' + (data.error || 'Try again'), 'error');
+    }
+  } catch(e) {
+    toast('Network error — try again', 'error');
+  }
+}
+
+async function handleBuy_OLD() {
   // DEBUG v7.0
   console.log('[xeris.fun] handleBuy called');
   console.log('[xeris.fun] wallet:', state.wallet?.address);
