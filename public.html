@@ -134,6 +134,7 @@ header{display:flex;justify-content:space-between;align-items:center;padding:16p
     <div class="modal-addr" id="modalAddr" onclick="copyEscrow()">-</div>
     <div class="modal-copy-hint">👆 Tap to copy · Send from Xeris wallet app</div>
     <div class="modal-step">STEP 2 OF 2 — AFTER SENDING</div>
+    <input id="txSigInput" style="width:100%;background:#0a0a0f;border:1px solid #adff2f;border-radius:8px;color:#adff2f;padding:12px;font-size:11px;font-family:monospace;margin-bottom:10px;outline:none" placeholder="Paste your Transaction ID/Signature here" />
     <br>
     <button class="modal-confirm-btn" onclick="confirmPayment()">✓ I SENT THE XRS</button>
     <button class="modal-cancel-btn" onclick="closeModal()">Cancel</button>
@@ -203,12 +204,14 @@ function closeModal(){
 }
 
 async function confirmPayment(){
+  const txSig = document.getElementById('txSigInput').value.trim();
+  if(!txSig || txSig.length < 32){ toast('Paste your Transaction ID first','error',4000); return; }
   closeModal();
   try {
     const r = await fetch('/api/state',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({action:'join', address:_pendingAddr, tickets:_pendingQty, username:_pendingName, txSig:'pay-'+Date.now()})
+      body: JSON.stringify({action:'join', address:_pendingAddr, tickets:_pendingQty, username:_pendingName, txSig: document.getElementById('txSigInput').value.trim()})
     });
     const d = await r.json();
     if(d.ok){
