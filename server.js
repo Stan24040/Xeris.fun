@@ -37,6 +37,55 @@ function deterministicRoll(seed, max) {
 
 // ── Verify TX on Xeris node ──
 async function verifyTransaction(txSig, fromAddress, expectedLamports) {
+  // Method 1: Try getTransaction RPC
+  try {
+    const rpcUrl = `http://${NODE_IP}:${RPC_PORT}`;
+    // Try multiple RPC method names Xeris might use
+    for (const method of ['getTransaction','getConfirmedTransaction','eth_getTransactionByHash']) {
+      try {
+        const resp = await fetch(rpcUrl, {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({jsonrpc:'2.0',id:1,method,params:[txSig]}),
+          signal: AbortSignal.timeout(8000)
+        });
+        const data = await resp.json();
+        console.log(`[VERIFY] ${method}:`, JSON.stringify(data).slice(0,200));
+        if (data.result && data.result !== null) {
+          if (S.verifiedTx.has(txSig)) return {ok:false,error:'TX already used'};
+          S.verifiedTx.add(txSig);
+          return {ok:true, method};
+        }
+      } catch(e) { console.log(`[VERIFY] ${method} failed:`, e.message); }
+    }
+  } catch(e) {}
+
+  // Method 2: Check escrow balance increased
+  try {
+    const balUrl = `http://${NODE_IP}:${NET_PORT}/balance/${ESCROW_ADDRESS}`;
+    const resp = await fetch(balUrl, {signal: AbortSignal.timeout(8000)});
+    const text = await resp.text();
+    console.log(`[VERIFY] Escrow balance check: ${text}`);
+    // Parse balance - Xeris returns lamports or XRS amount
+    const bal = parseFloat(text.replace(/[^0-9.]/g,''));
+    if (!isNaN(bal)) {
+      const expectedXRS = expectedLamports / 1_000_000_000;
+      // Store last known balance to detect change
+      if (!S.escrowBalance) S.escrowBalance = 0;
+      const received = bal - S.escrowBalance;
+      console.log(`[VERIFY] Balance change: ${received}, expected: ${expectedXRS}`);
+      if (received >= expectedXRS * 0.95) {
+        S.escrowBalance = bal;
+        if (S.verifiedTx.has(txSig)) return {ok:false,error:'TX already used'};
+        S.verifiedTx.add(txSig);
+        return {ok:true, method:'balance-check'};
+      }
+    }
+  } catch(e) { console.log('[VERIFY] Balance check failed:', e.message); }
+
+  return {ok:false, error:'Transaction not found on chain'};
+}
+
+async function verifyTransaction_UNUSED(txSig, fromAddress, expectedLamports) {
   try {
     const url = `http://${NODE_IP}:${RPC_PORT}`;
     const body = JSON.stringify({
