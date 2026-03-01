@@ -4,64 +4,125 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>XERIS.FUN — On-Chain Lottery</title>
+<meta property="og:title" content="XERIS.FUN Lottery" />
+<meta property="og:description" content="Win big on the Xeris blockchain! Buy tickets, one winner takes 95% of the pool." />
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#0a0a0f;color:white;font-family:'Segoe UI',sans-serif;min-height:100vh}
-.ticker{background:#adff2f;color:#000;font-size:11px;font-weight:700;padding:6px 0;text-align:center;letter-spacing:2px}
-header{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid #1a1a2e}
-.logo{font-size:24px;font-weight:900;color:#adff2f;letter-spacing:2px}
+.ticker{background:#adff2f;color:#000;font-size:11px;font-weight:700;padding:6px 16px;overflow:hidden;white-space:nowrap}
+.ticker-inner{display:inline-block;animation:ticker 20s linear infinite}
+@keyframes ticker{0%{transform:translateX(100vw)}100%{transform:translateX(-100%)}}
+header{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid #1a1a2e}
+.logo{font-size:26px;font-weight:900;color:#adff2f;letter-spacing:2px}
 .logo span{color:#ff2d78}
 .net-badge{background:#1a1a2e;border:1px solid #adff2f;color:#adff2f;font-size:11px;padding:4px 10px;border-radius:20px}
-.container{max-width:480px;margin:0 auto;padding:20px}
-.card{background:#12121a;border:1px solid #1e1e2e;border-radius:16px;padding:24px;margin-bottom:16px}
-.card-title{font-size:11px;letter-spacing:3px;color:#555;margin-bottom:16px}
-.timer{text-align:center;margin-bottom:20px}
-.timer-val{font-size:48px;font-weight:900;color:#adff2f;font-variant-numeric:tabular-nums}
-.timer-label{font-size:11px;color:#555;letter-spacing:2px}
-.prize-pool{text-align:center;padding:16px 0;border-top:1px solid #1e1e2e;border-bottom:1px solid #1e1e2e;margin:16px 0}
-.prize-val{font-size:36px;font-weight:900;color:#ff2d78}
-.prize-label{font-size:11px;color:#555;letter-spacing:2px}
-.split{display:flex;justify-content:space-between;font-size:12px;color:#555;margin-top:8px}
-.split span{color:#adff2f}
-.addr-input{width:100%;background:#0a0a0f;border:1px solid #333;border-radius:10px;color:white;padding:12px;font-size:12px;margin-bottom:12px;outline:none}
+.container{max-width:500px;margin:0 auto;padding:16px}
+.card{background:#12121a;border:1px solid #1e1e2e;border-radius:16px;padding:20px;margin-bottom:14px}
+.card-title{font-size:10px;letter-spacing:3px;color:#555;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center}
+
+/* TABS */
+.tabs{display:flex;gap:4px;margin-bottom:14px}
+.tab{flex:1;padding:10px;background:#1a1a2e;border:none;color:#555;font-size:12px;font-weight:700;letter-spacing:1px;border-radius:8px;cursor:pointer;transition:.2s}
+.tab.active{background:#adff2f;color:#000}
+
+/* ROUND SELECTOR */
+.round-select{display:flex;gap:6px;margin-bottom:14px}
+.round-btn{flex:1;padding:8px 4px;background:#1a1a2e;border:1px solid #333;color:#555;font-size:11px;font-weight:700;border-radius:8px;cursor:pointer}
+.round-btn.active{background:#adff2f20;border-color:#adff2f;color:#adff2f}
+
+/* TIMER */
+.timer{text-align:center;padding:10px 0}
+.timer-digits{display:flex;justify-content:center;gap:8px;margin-bottom:4px}
+.timer-block{background:#0a0a0f;border:1px solid #1e1e2e;border-radius:8px;padding:8px 12px;text-align:center;min-width:54px}
+.timer-num{font-size:32px;font-weight:900;color:#adff2f;font-variant-numeric:tabular-nums;line-height:1}
+.timer-lbl{font-size:9px;color:#555;letter-spacing:1px}
+.timer-sep{font-size:28px;color:#333;align-self:center;margin-top:-8px}
+
+/* PRIZE */
+.prize-pool{text-align:center;padding:14px 0;border-top:1px solid #1e1e2e;border-bottom:1px solid #1e1e2e;margin:12px 0}
+.prize-val{font-size:40px;font-weight:900;color:#ff2d78;margin:4px 0}
+.prize-label{font-size:10px;color:#555;letter-spacing:2px}
+.split{display:flex;justify-content:space-between;font-size:12px;color:#555;margin-top:8px;padding:0 4px}
+.split span{color:#adff2f;font-weight:700}
+.stats-row{display:flex;justify-content:space-around;font-size:12px;color:#555;margin-top:10px}
+.stats-row b{color:white;display:block;font-size:18px;color:#adff2f}
+
+/* BUY FORM */
+.addr-input{width:100%;background:#0a0a0f;border:1px solid #333;border-radius:10px;color:white;padding:12px;font-size:12px;margin-bottom:10px;outline:none;transition:.2s}
 .addr-input:focus{border-color:#adff2f}
 .addr-input::placeholder{color:#444}
-.ticket-row{display:flex;align-items:center;gap:12px;margin-bottom:16px}
-.qty-btn{width:44px;height:44px;background:#1a1a2e;border:1px solid #333;border-radius:8px;color:white;font-size:20px;cursor:pointer;flex-shrink:0}
-.qty-input{flex:1;text-align:center;background:#0a0a0f;border:1px solid #333;border-radius:8px;color:#adff2f;font-size:24px;font-weight:700;height:44px}
-.price-tag{font-size:12px;color:#555;text-align:right;margin-bottom:16px}
+.ticket-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.qty-btn{width:44px;height:44px;background:#1a1a2e;border:1px solid #333;border-radius:8px;color:white;font-size:22px;cursor:pointer;flex-shrink:0;transition:.2s}
+.qty-btn:active{background:#adff2f;color:#000}
+.qty-input{flex:1;text-align:center;background:#0a0a0f;border:1px solid #333;border-radius:8px;color:#adff2f;font-size:24px;font-weight:700;height:44px;outline:none}
+.price-tag{font-size:12px;color:#555;text-align:right;margin-bottom:14px}
 .price-tag span{color:#adff2f;font-weight:700}
-.buy-btn{width:100%;background:#adff2f;color:#000;font-weight:900;font-size:18px;padding:18px;border:none;border-radius:12px;cursor:pointer;letter-spacing:2px}
-.buy-btn:active{background:#8fd400}
-.players-list{max-height:200px;overflow-y:auto}
-.player-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #1a1a2e;font-size:13px}
-.player-addr{color:#888;font-family:monospace}
-.player-tickets{color:#adff2f;font-weight:700}
-.winners-list{max-height:200px;overflow-y:auto}
-.winner-row{padding:10px 0;border-bottom:1px solid #1a1a2e}
-.winner-addr{font-family:monospace;font-size:12px;color:#adff2f}
-.winner-amount{font-size:13px;color:#ff2d78;font-weight:700}
-.winner-round{font-size:11px;color:#555}
-.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);padding:12px 24px;border-radius:10px;font-size:14px;font-weight:600;z-index:9998;animation:fadeIn .3s;max-width:90vw;text-align:center}
+.buy-btn{width:100%;background:#adff2f;color:#000;font-weight:900;font-size:18px;padding:16px;border:none;border-radius:12px;cursor:pointer;letter-spacing:2px;transition:.1s}
+.buy-btn:active{transform:scale(0.98)}
+
+/* PLAYERS */
+.player-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #1a1a2e;font-size:13px}
+.player-name{color:#adff2f;font-weight:700}
+.player-addr{color:#555;font-family:monospace;font-size:11px}
+.player-tickets{color:white;font-weight:700;background:#1a1a2e;padding:3px 10px;border-radius:20px;font-size:12px}
+
+/* WINNERS */
+.winner-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #1a1a2e}
+.winner-info{flex:1}
+.winner-name{color:#adff2f;font-weight:700;font-size:14px}
+.winner-addr{color:#555;font-family:monospace;font-size:10px}
+.winner-round{font-size:10px;color:#555}
+.winner-amount{color:#ff2d78;font-weight:900;font-size:16px;text-align:right}
+.winner-share-btn{background:transparent;border:1px solid #333;color:#555;font-size:11px;padding:4px 8px;border-radius:6px;cursor:pointer;margin-left:8px}
+.winner-share-btn:active{border-color:#adff2f;color:#adff2f}
+
+/* LEADERBOARD */
+.lb-row{display:flex;align-items:center;padding:10px 0;border-bottom:1px solid #1a1a2e;gap:12px}
+.lb-rank{font-size:18px;font-weight:900;color:#555;width:28px;text-align:center;flex-shrink:0}
+.lb-rank.gold{color:#ffd700}
+.lb-rank.silver{color:#c0c0c0}
+.lb-rank.bronze{color:#cd7f32}
+.lb-info{flex:1}
+.lb-name{color:#adff2f;font-weight:700;font-size:14px}
+.lb-addr{color:#555;font-family:monospace;font-size:10px}
+.lb-wins{font-size:11px;color:#555}
+.lb-total{color:#ff2d78;font-weight:900;font-size:15px;text-align:right}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:12px 24px;border-radius:10px;font-size:14px;font-weight:600;z-index:9998;animation:fadeIn .3s;max-width:90vw;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.5)}
 .toast.success{background:#adff2f;color:#000}
 .toast.error{background:#ff2d78;color:#fff}
-.toast.info{background:#1a1aff;color:#fff}
+.toast.info{background:#1a1a2e;color:white;border:1px solid #333}
 @keyframes fadeIn{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
-.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.92);z-index:9999;display:none;align-items:center;justify-content:center;padding:16px}
-.modal-box{background:#12121a;border:2px solid #adff2f;border-radius:16px;padding:28px;max-width:400px;width:100%;text-align:center}
+
+/* MODAL */
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.93);z-index:9999;display:none;align-items:center;justify-content:center;padding:16px;overflow-y:auto}
+.modal-box{background:#12121a;border:2px solid #adff2f;border-radius:16px;padding:24px;max-width:400px;width:100%;text-align:center}
 .modal-step{font-size:10px;color:#555;letter-spacing:3px;margin-bottom:4px}
-.modal-title{font-size:22px;color:#adff2f;font-weight:900;margin-bottom:20px}
-.modal-amount{font-size:44px;font-weight:900;color:#adff2f;margin-bottom:4px}
-.modal-sub{font-size:12px;color:#555;margin-bottom:16px}
-.modal-addr{font-family:monospace;font-size:11px;color:#adff2f;background:#0a0a0f;border:1px solid #333;padding:14px;border-radius:8px;word-break:break-all;cursor:pointer;margin-bottom:6px}
-.modal-copy-hint{font-size:11px;color:#555;margin-bottom:24px}
-.modal-confirm-btn{width:100%;background:#adff2f;color:#000;font-weight:900;font-size:16px;padding:16px;border:none;border-radius:10px;cursor:pointer;margin-bottom:10px;letter-spacing:1px}
-.modal-cancel-btn{width:100%;background:transparent;color:#555;font-size:13px;padding:10px;border:1px solid #333;border-radius:8px;cursor:pointer}
+.modal-title{font-size:20px;color:#adff2f;font-weight:900;margin-bottom:16px}
+.modal-amount{font-size:40px;font-weight:900;color:#adff2f;margin-bottom:4px}
+.modal-sub{font-size:12px;color:#555;margin-bottom:14px}
+.modal-addr{font-family:monospace;font-size:11px;color:#adff2f;background:#0a0a0f;border:1px solid #333;padding:12px;border-radius:8px;word-break:break-all;cursor:pointer;margin-bottom:4px;text-align:left}
+.modal-copy-hint{font-size:11px;color:#555;margin-bottom:14px}
+.qr-box{background:white;border-radius:8px;padding:8px;display:inline-block;margin-bottom:14px}
+.tx-input{width:100%;background:#0a0a0f;border:1px solid #adff2f;border-radius:8px;color:#adff2f;padding:12px;font-size:11px;font-family:monospace;margin-bottom:10px;outline:none}
+.tx-input::placeholder{color:#444}
+.modal-btn{width:100%;font-weight:900;font-size:15px;padding:14px;border:none;border-radius:10px;cursor:pointer;margin-bottom:8px;letter-spacing:1px}
+.modal-btn.primary{background:#adff2f;color:#000}
+.modal-btn.secondary{background:transparent;color:#555;border:1px solid #333}
+
+/* WIN MODAL */
+.win-modal{border-color:#ff2d78}
+.win-amount{font-size:48px;font-weight:900;color:#ff2d78;margin:10px 0}
+.share-row{display:flex;gap:8px;margin-top:10px}
+.share-btn{flex:1;padding:12px;border-radius:8px;border:none;font-weight:700;font-size:13px;cursor:pointer}
+.share-twitter{background:#1da1f2;color:white}
+.share-copy{background:#1a1a2e;color:#adff2f;border:1px solid #adff2f}
 </style>
 </head>
 <body>
 
-<div class="ticker">◆ XERIS.FUN — DECENTRALIZED LOTTERY ON XERIS CHAIN ◆ 10 XRS / TICKET ◆ 95% TO WINNER ◆</div>
+<div class="ticker"><span class="ticker-inner">◆ XERIS.FUN — DECENTRALIZED LOTTERY ON XERIS CHAIN &nbsp;&nbsp;&nbsp; ◆ 10 XRS PER TICKET &nbsp;&nbsp;&nbsp; ◆ 95% TO WINNER, 5% TREASURY &nbsp;&nbsp;&nbsp; ◆ TRANSPARENT · ON-CHAIN · NO HOUSE GAMES &nbsp;&nbsp;&nbsp;</span></div>
 
 <header>
   <div class="logo">XERIS<span>.</span>FUN</div>
@@ -70,30 +131,55 @@ header{display:flex;justify-content:space-between;align-items:center;padding:16p
 
 <div class="container">
 
-  <!-- ROUND TIMER -->
+  <!-- ROUND TYPE SELECTOR -->
+  <div class="round-select">
+    <button class="round-btn active" onclick="setRoundType('5m',this)">5 MIN</button>
+    <button class="round-btn" onclick="setRoundType('1h',this)">1 HOUR</button>
+    <button class="round-btn" onclick="setRoundType('24h',this)">DAILY</button>
+  </div>
+
+  <!-- ROUND INFO + TIMER -->
   <div class="card">
-    <div class="card-title">ROUND #<span id="roundNum">-</span></div>
+    <div class="card-title">
+      <span>ROUND #<span id="roundNum">-</span></span>
+      <span id="roundTypeLabel" style="color:#adff2f">5 MIN DRAW</span>
+    </div>
     <div class="timer">
-      <div class="timer-val" id="timerVal">--:--</div>
-      <div class="timer-label">UNTIL DRAW</div>
+      <div class="timer-digits">
+        <div class="timer-block"><div class="timer-num" id="timerH">00</div><div class="timer-lbl">HRS</div></div>
+        <div class="timer-sep">:</div>
+        <div class="timer-block"><div class="timer-num" id="timerM">00</div><div class="timer-lbl">MIN</div></div>
+        <div class="timer-sep">:</div>
+        <div class="timer-block"><div class="timer-num" id="timerS">00</div><div class="timer-lbl">SEC</div></div>
+      </div>
     </div>
     <div class="prize-pool">
       <div class="prize-label">PRIZE POOL</div>
       <div class="prize-val"><span id="prizePool">0.00</span> XRS</div>
       <div class="split">
-        <div>Winner gets <span id="winnerSplit">0.00</span> XRS</div>
+        <div>🏆 Winner <span id="winnerSplit">0.00</span> XRS</div>
         <div>Treasury <span id="treasurySplit">0.00</span> XRS</div>
       </div>
     </div>
-    <div style="text-align:center;font-size:12px;color:#555">
-      <span id="playerCount">0</span> players · <span id="ticketCount2">0</span> tickets sold
+    <div class="stats-row">
+      <div><b id="playerCount">0</b>players</div>
+      <div><b id="ticketCount2">0</b>tickets</div>
+      <div><b>10 XRS</b>per ticket</div>
     </div>
   </div>
 
-  <!-- BUY TICKETS -->
-  <div class="card">
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('buy',this)">BUY</button>
+    <button class="tab" onclick="showTab('players',this)">PLAYERS</button>
+    <button class="tab" onclick="showTab('winners',this)">WINNERS</button>
+    <button class="tab" onclick="showTab('leaderboard',this)">🏆 TOP</button>
+  </div>
+
+  <!-- BUY TAB -->
+  <div id="tab-buy" class="card">
     <div class="card-title">BUY TICKETS</div>
-    <input id="playerName" class="addr-input" placeholder="Your username (e.g. @kings_24)" autocomplete="off" style="margin-bottom:8px" />
+    <input id="playerName" class="addr-input" placeholder="Username (e.g. kings_24)" autocomplete="off" />
     <input id="playerAddr" class="addr-input" placeholder="Your XRS wallet address (to receive winnings)" autocomplete="off" spellcheck="false" />
     <div class="ticket-row">
       <button class="qty-btn" onclick="changeQty(-1)">−</button>
@@ -101,190 +187,308 @@ header{display:flex;justify-content:space-between;align-items:center;padding:16p
       <button class="qty-btn" onclick="changeQty(1)">+</button>
     </div>
     <div class="price-tag">Total: <span id="totalCost">10</span> XRS · 10 XRS/ticket</div>
-    <button class="buy-btn" onclick="handleBuy()">BUY TICKETS</button>
+    <button class="buy-btn" onclick="handleBuy()">🎰 BUY TICKETS</button>
   </div>
 
-  <!-- PLAYERS -->
-  <div class="card">
+  <!-- PLAYERS TAB -->
+  <div id="tab-players" class="card" style="display:none">
     <div class="card-title">CURRENT PLAYERS</div>
-    <div class="players-list" id="playersList">
-      <div style="color:#555;font-size:13px;text-align:center;padding:20px">No players yet — be first!</div>
-    </div>
+    <div id="playersList"><div style="color:#555;text-align:center;padding:20px;font-size:13px">No players yet — be first!</div></div>
   </div>
 
-  <!-- WINNERS -->
-  <div class="card">
+  <!-- WINNERS TAB -->
+  <div id="tab-winners" class="card" style="display:none">
     <div class="card-title">RECENT WINNERS</div>
-    <div class="winners-list" id="winnersList">
-      <div style="color:#555;font-size:13px;text-align:center;padding:20px">No winners yet</div>
-    </div>
+    <div id="winnersList"><div style="color:#555;text-align:center;padding:20px;font-size:13px">No winners yet</div></div>
+  </div>
+
+  <!-- LEADERBOARD TAB -->
+  <div id="tab-leaderboard" class="card" style="display:none">
+    <div class="card-title">ALL-TIME TOP WINNERS</div>
+    <div id="leaderboard"><div style="color:#555;text-align:center;padding:20px;font-size:13px">No data yet</div></div>
   </div>
 
 </div>
 
-<!-- ESCROW PAYMENT MODAL -->
-<div class="modal-overlay" id="escrowModal">
+<!-- PAYMENT MODAL -->
+<div class="modal-overlay" id="payModal">
   <div class="modal-box">
     <div class="modal-step">STEP 1 OF 2</div>
     <div class="modal-title">SEND PAYMENT</div>
-    <div style="color:#888;font-size:13px;margin-bottom:4px">Open Xeris wallet and send exactly</div>
+    <div style="color:#888;font-size:13px;margin-bottom:4px">Open Xeris wallet · Send exactly</div>
     <div class="modal-amount" id="modalAmount">-</div>
-    <div class="modal-sub" id="modalSub">- tickets × 10 XRS</div>
-    <div style="color:#888;font-size:12px;margin-bottom:8px">to this escrow address:</div>
+    <div class="modal-sub" id="modalSub">-</div>
+    <div style="color:#888;font-size:12px;margin-bottom:8px">to escrow address:</div>
     <div class="modal-addr" id="modalAddr" onclick="copyEscrow()">-</div>
-    <div class="modal-copy-hint">👆 Tap to copy · Send from Xeris wallet app</div>
-    <div class="modal-step">STEP 2 OF 2 — AFTER SENDING</div>
-    <input id="txSigInput" style="width:100%;background:#0a0a0f;border:1px solid #adff2f;border-radius:8px;color:#adff2f;padding:12px;font-size:11px;font-family:monospace;margin-bottom:10px;outline:none" placeholder="Paste your Transaction ID/Signature here" />
+    <div class="qr-box" id="qrBox"></div>
+    <div class="modal-copy-hint">👆 Tap address to copy · Scan QR in Xeris wallet</div>
+    <div class="modal-step">STEP 2 — AFTER SENDING</div><br>
+    <input id="txSigInput" class="tx-input" placeholder="Paste Transaction ID from Xeris wallet Activity tab" />
+    <button class="modal-btn primary" onclick="confirmPayment()">✓ I SENT THE XRS</button>
+    <button class="modal-btn secondary" onclick="closeModal('payModal')">Cancel</button>
+  </div>
+</div>
+
+<!-- WIN MODAL -->
+<div class="modal-overlay" id="winModal">
+  <div class="modal-box win-modal">
+    <div style="font-size:48px;margin-bottom:8px">🎰</div>
+    <div class="modal-title" style="color:#ff2d78">YOU WON!</div>
+    <div class="win-amount"><span id="winAmount">-</span> XRS</div>
+    <div style="color:#888;font-size:13px;margin-bottom:16px">Prize is being airdropped to your wallet!</div>
+    <div class="share-row">
+      <button class="share-btn share-twitter" onclick="shareTwitter()">🐦 Share on X</button>
+      <button class="share-btn share-copy" onclick="shareLink()">📋 Copy Link</button>
+    </div>
     <br>
-    <button class="modal-confirm-btn" onclick="confirmPayment()">✓ I SENT THE XRS</button>
-    <button class="modal-cancel-btn" onclick="closeModal()">Cancel</button>
+    <button class="modal-btn secondary" onclick="closeModal('winModal')">Close</button>
   </div>
 </div>
 
 <script>
+// QR Code generator (pure JS, no library needed)
+function generateQR(text, size=150){
+  // Use QR server API
+  const img = document.createElement('img');
+  img.src = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(text)}`;
+  img.width = size; img.height = size;
+  img.style.display='block';
+  return img;
+}
+
+const ROUND_CONFIGS = {
+  '5m':  { label:'5 MIN DRAW',   interval: 5*60*1000,    epoch: 1740535200000 },
+  '1h':  { label:'HOURLY DRAW',  interval: 60*60*1000,   epoch: 1740535200000 },
+  '24h': { label:'DAILY DRAW',   interval: 24*60*60*1000,epoch: 1740535200000 },
+};
+let currentRoundType = '5m';
+
 const TICKET_PRICE = 10;
-const DRAW_INTERVAL = 5 * 60 * 1000;
-const EPOCH_START = 1740535200000;
 const ESCROW_FALLBACK = '6G4GroMrVsGjd3xhywxfzXDg7vPn1V2Mky4B3qsXVGHo';
 
-let state = { round:1, players:[], winners:[], drawTarget:0, escrowAddress: ESCROW_FALLBACK };
-let _pendingQty = 1;
-let _pendingAddr = '';
-let _pendingName = '';
+let state = { round:1, players:[], winners:[], drawTarget:0, escrowAddress:ESCROW_FALLBACK };
+let _pendingQty=1, _pendingAddr='', _pendingName='';
+let _myWinAmount=0, _myWinAddr='';
 
-function getCurrentRound(){ return Math.floor((Date.now()-EPOCH_START)/DRAW_INTERVAL)+1; }
-function getRoundEnd(r){ return EPOCH_START + r*DRAW_INTERVAL; }
+function getRoundConfig(){ return ROUND_CONFIGS[currentRoundType]; }
+function getCurrentRound(){
+  const cfg = getRoundConfig();
+  return Math.floor((Date.now()-cfg.epoch)/cfg.interval)+1;
+}
+function getRoundEnd(r){
+  const cfg = getRoundConfig();
+  return cfg.epoch + r*cfg.interval;
+}
+
+function setRoundType(type, btn){
+  currentRoundType = type;
+  document.querySelectorAll('.round-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('roundTypeLabel').textContent = ROUND_CONFIGS[type].label;
+  pollState();
+}
+
+function showTab(name, btn){
+  ['buy','players','winners','leaderboard'].forEach(t=>{
+    document.getElementById('tab-'+t).style.display = t===name?'block':'none';
+  });
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  if(name==='leaderboard') renderLeaderboard();
+}
 
 function changeQty(d){
-  const el = document.getElementById('qtyInput');
-  let v = parseInt(el.value)||1;
-  v = Math.max(1, Math.min(100, v+d));
-  el.value = v;
-  document.getElementById('totalCost').textContent = v * TICKET_PRICE;
+  const el=document.getElementById('qtyInput');
+  let v=Math.max(1,Math.min(100,(parseInt(el.value)||1)+d));
+  el.value=v;
+  document.getElementById('totalCost').textContent=v*TICKET_PRICE;
 }
 
-function toast(msg, type='info', ms=4000){
+function toast(msg,type='info',ms=4000){
   document.querySelectorAll('.toast').forEach(e=>e.remove());
-  const t = document.createElement('div');
-  t.className = 'toast '+type;
-  t.textContent = msg;
+  const t=document.createElement('div');
+  t.className='toast '+type; t.textContent=msg;
   document.body.appendChild(t);
-  setTimeout(()=>t.remove(), ms);
+  setTimeout(()=>t.remove(),ms);
 }
 
-function shortAddr(a){ return a ? a.slice(0,6)+'...'+a.slice(-4) : ''; }
+function shortAddr(a){ return a?a.slice(0,6)+'...'+a.slice(-4):''; }
+function closeModal(id){ document.getElementById(id).style.display='none'; }
 
 function handleBuy(){
-  const addr = document.getElementById('playerAddr').value.trim();
-  if(!addr || addr.length < 32){
-    toast('Enter your XRS wallet address first','error'); 
-    document.getElementById('playerAddr').focus();
-    return;
-  }
-  const qty = parseInt(document.getElementById('qtyInput').value)||1;
-  _pendingQty = qty;
-  _pendingAddr = addr;
-  _pendingName = document.getElementById('playerName').value.trim().replace('@','');
-  const cost = qty * TICKET_PRICE;
-  const escrow = state.escrowAddress || ESCROW_FALLBACK;
-  document.getElementById('modalAmount').textContent = cost + ' XRS';
-  document.getElementById('modalSub').textContent = qty + ' ticket' + (qty>1?'s':'') + ' × 10 XRS';
-  document.getElementById('modalAddr').textContent = escrow;
-  document.getElementById('escrowModal').style.display = 'flex';
+  const addr=document.getElementById('playerAddr').value.trim();
+  const name=document.getElementById('playerName').value.trim().replace('@','');
+  if(!addr||addr.length<32){ toast('Enter your XRS wallet address','error'); document.getElementById('playerAddr').focus(); return; }
+  const qty=parseInt(document.getElementById('qtyInput').value)||1;
+  _pendingQty=qty; _pendingAddr=addr; _pendingName=name;
+  const cost=qty*TICKET_PRICE;
+  const escrow=state.escrowAddress||ESCROW_FALLBACK;
+
+  document.getElementById('modalAmount').textContent=cost+' XRS';
+  document.getElementById('modalSub').textContent=qty+' ticket'+(qty>1?'s':'')+' × 10 XRS';
+  document.getElementById('modalAddr').textContent=escrow;
+
+  // Generate QR code
+  const qrBox=document.getElementById('qrBox');
+  qrBox.innerHTML='';
+  qrBox.appendChild(generateQR(escrow,120));
+
+  document.getElementById('txSigInput').value='';
+  document.getElementById('payModal').style.display='flex';
 }
 
 function copyEscrow(){
-  const addr = document.getElementById('modalAddr').textContent;
-  if(navigator.clipboard) navigator.clipboard.writeText(addr);
+  const addr=document.getElementById('modalAddr').textContent;
+  navigator.clipboard&&navigator.clipboard.writeText(addr);
   toast('Address copied!','success',2000);
 }
 
-function closeModal(){
-  document.getElementById('escrowModal').style.display = 'none';
-}
-
 async function confirmPayment(){
-  const txSig = document.getElementById('txSigInput').value.trim();
-  if(!txSig || txSig.length < 32){ toast('Paste your Transaction ID first','error',4000); return; }
-  closeModal();
+  const txSig=document.getElementById('txSigInput').value.trim();
+  if(!txSig||txSig.length<32){ toast('Paste your Transaction ID first','error',4000); return; }
+  closeModal('payModal');
+  toast('Verifying payment on-chain...','info',5000);
   try {
-    const r = await fetch('/api/state',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({action:'join', address:_pendingAddr, tickets:_pendingQty, username:_pendingName, txSig: document.getElementById('txSigInput').value.trim()})
+    const r=await fetch('/api/state',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'join',address:_pendingAddr,tickets:_pendingQty,username:_pendingName,txSig,roundType:currentRoundType})
     });
-    const d = await r.json();
+    const d=await r.json();
     if(d.ok){
-      toast('✓ '+_pendingQty+' ticket'+ (_pendingQty>1?'s':'')+' registered! Good luck! 🎰','success',8000);
+      toast('✓ '+_pendingQty+' ticket'+(_pendingQty>1?'s':'')+' registered! Good luck! 🎰','success',8000);
+      renderPlayers(d.players||state.players);
       pollState();
     } else {
-      toast('Error: '+(d.error||'Try again'),'error');
+      toast('Error: '+(d.error||'Try again'),'error',8000);
     }
   } catch(e){ toast('Network error — try again','error'); }
 }
 
 function renderPlayers(players){
-  const el = document.getElementById('playersList');
-  if(!players||!players.length){ el.innerHTML='<div style="color:#555;font-size:13px;text-align:center;padding:20px">No players yet</div>'; return; }
-  el.innerHTML = players.map(p=>`
+  const el=document.getElementById('playersList');
+  if(!players||!players.length){ el.innerHTML='<div style="color:#555;text-align:center;padding:20px;font-size:13px">No players yet</div>'; return; }
+  el.innerHTML=players.map((p,i)=>`
     <div class="player-row">
-      <div class="player-addr">${p.username ? "@"+p.username : shortAddr(p.address)}</div>
+      <div>
+        <div class="player-name">${p.username?'@'+p.username:'Player '+(i+1)}</div>
+        <div class="player-addr">${shortAddr(p.address)}</div>
+      </div>
       <div class="player-tickets">${p.tickets} ticket${p.tickets>1?'s':''}</div>
     </div>`).join('');
 }
 
 function renderWinners(winners){
-  const el = document.getElementById('winnersList');
-  if(!winners||!winners.length){ el.innerHTML='<div style="color:#555;font-size:13px;text-align:center;padding:20px">No winners yet</div>'; return; }
-  el.innerHTML = winners.map(w=>`
+  const el=document.getElementById('winnersList');
+  if(!winners||!winners.length){ el.innerHTML='<div style="color:#555;text-align:center;padding:20px;font-size:13px">No winners yet</div>'; return; }
+  el.innerHTML=winners.map(w=>`
     <div class="winner-row">
-      <div class="winner-addr">${shortAddr(w.address)}</div>
-      <div class="winner-amount">+${w.amount} XRS</div>
-      <div class="winner-round">Round #${w.round}</div>
+      <div class="winner-info">
+        <div class="winner-name">${w.username?'@'+w.username:shortAddr(w.address)}</div>
+        <div class="winner-addr">${shortAddr(w.address)}</div>
+        <div class="winner-round">Round #${w.round} · ${new Date(w.drawnAt||Date.now()).toLocaleDateString()}</div>
+      </div>
+      <div>
+        <div class="winner-amount">+${w.amount} XRS</div>
+        <button class="winner-share-btn" onclick="shareWin('${w.username||shortAddr(w.address)}','${w.amount}','${w.round}')">Share</button>
+      </div>
     </div>`).join('');
 }
 
+function renderLeaderboard(){
+  const winners = state.winners||[];
+  // Aggregate by address
+  const map={};
+  winners.forEach(w=>{
+    if(!map[w.address]) map[w.address]={address:w.address,username:w.username||'',wins:0,total:0};
+    map[w.address].wins++;
+    map[w.address].total+=parseFloat(w.amount||0);
+    if(w.username) map[w.address].username=w.username;
+  });
+  const sorted=Object.values(map).sort((a,b)=>b.total-a.total);
+  const el=document.getElementById('leaderboard');
+  if(!sorted.length){ el.innerHTML='<div style="color:#555;text-align:center;padding:20px;font-size:13px">No data yet</div>'; return; }
+  const medals=['🥇','🥈','🥉'];
+  const rankClass=['gold','silver','bronze'];
+  el.innerHTML=sorted.slice(0,20).map((p,i)=>`
+    <div class="lb-row">
+      <div class="lb-rank ${rankClass[i]||''}">${medals[i]||'#'+(i+1)}</div>
+      <div class="lb-info">
+        <div class="lb-name">${p.username?'@'+p.username:shortAddr(p.address)}</div>
+        <div class="lb-addr">${shortAddr(p.address)}</div>
+        <div class="lb-wins">${p.wins} win${p.wins>1?'s':''}</div>
+      </div>
+      <div class="lb-total">+${p.total.toFixed(2)} XRS</div>
+    </div>`).join('');
+}
+
+function shareWin(name, amount, round){
+  const text=`🎰 ${name} just won ${amount} XRS on XERIS.FUN! Round #${round} 🏆\nPlay at: ${window.location.href}`;
+  if(navigator.share){ navigator.share({title:'XERIS.FUN Winner!',text,url:window.location.href}); }
+  else { navigator.clipboard&&navigator.clipboard.writeText(text); toast('Share text copied!','success'); }
+}
+
+function shareTwitter(){
+  const text=encodeURIComponent(`🎰 I just won ${_myWinAmount} XRS on XERIS.FUN!\n\nDecentralized lottery on Xeris blockchain.\nPlay now:`);
+  window.open(`https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(window.location.href)}`,'_blank');
+}
+
+function shareLink(){
+  const text=`🎰 I just won ${_myWinAmount} XRS on XERIS.FUN! Play at: ${window.location.href}`;
+  navigator.clipboard&&navigator.clipboard.writeText(text);
+  toast('Share text copied!','success');
+}
+
 function updateStats(players){
-  const total = players.reduce((s,p)=>s+p.tickets,0);
-  const pool = total * TICKET_PRICE;
-  document.getElementById('playerCount').textContent = players.length;
-  document.getElementById('ticketCount2').textContent = total;
-  document.getElementById('prizePool').textContent = pool.toFixed(2);
-  document.getElementById('winnerSplit').textContent = (pool*0.95).toFixed(2);
-  document.getElementById('treasurySplit').textContent = (pool*0.05).toFixed(2);
+  const total=players.reduce((s,p)=>s+p.tickets,0);
+  const pool=total*TICKET_PRICE;
+  document.getElementById('playerCount').textContent=players.length;
+  document.getElementById('ticketCount2').textContent=total;
+  document.getElementById('prizePool').textContent=pool.toFixed(2);
+  document.getElementById('winnerSplit').textContent=(pool*0.95).toFixed(2);
+  document.getElementById('treasurySplit').textContent=(pool*0.05).toFixed(2);
 }
 
 function updateTimer(){
-  const now = Date.now();
-  const left = Math.max(0, state.drawTarget - now);
-  const m = Math.floor(left/60000);
-  const s = Math.floor((left%60000)/1000);
-  document.getElementById('timerVal').textContent = String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+  const left=Math.max(0,state.drawTarget-Date.now());
+  const h=Math.floor(left/3600000);
+  const m=Math.floor((left%3600000)/60000);
+  const s=Math.floor((left%60000)/1000);
+  document.getElementById('timerH').textContent=String(h).padStart(2,'0');
+  document.getElementById('timerM').textContent=String(m).padStart(2,'0');
+  document.getElementById('timerS').textContent=String(s).padStart(2,'0');
   if(left===0) triggerDraw();
 }
 
 async function triggerDraw(){
   try {
-    const r = await fetch('/api/state',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'draw',round:state.round})});
-    const d = await r.json();
+    const r=await fetch('/api/state',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'draw',round:state.round,roundType:currentRoundType})});
+    const d=await r.json();
     if(d.winner){
-      toast('🎰 Winner: '+shortAddr(d.winner.address)+' won '+d.winner.amount+' XRS — airdropping now!','success',12000);
-      pollState();
+      renderWinners([d.winner,...(state.winners||[])]);
+      toast('🎰 '+( d.winner.username?'@'+d.winner.username:shortAddr(d.winner.address))+' won '+d.winner.amount+' XRS!','success',12000);
+      // Check if we won
+      const myAddr=document.getElementById('playerAddr').value.trim();
+      if(myAddr && d.winner.address===myAddr){
+        _myWinAmount=d.winner.amount;
+        document.getElementById('winAmount').textContent=d.winner.amount;
+        document.getElementById('winModal').style.display='flex';
+      }
+      setTimeout(pollState,2000);
     }
   } catch(e){}
 }
 
 async function pollState(){
   try {
-    const r = await fetch('/api/state');
-    const d = await r.json();
+    const r=await fetch('/api/state');
+    const d=await r.json();
     if(d.ok){
-      state.round = d.round;
-      state.drawTarget = d.drawTarget;
-      state.players = d.players||[];
-      state.winners = d.winners||[];
-      if(d.escrowAddress) state.escrowAddress = d.escrowAddress;
-      document.getElementById('roundNum').textContent = d.round;
+      state.round=d.round;
+      state.drawTarget=d.drawTarget||getRoundEnd(d.round);
+      state.players=d.players||[];
+      state.winners=d.winners||[];
+      if(d.escrowAddress) state.escrowAddress=d.escrowAddress;
+      document.getElementById('roundNum').textContent=d.round;
       renderPlayers(state.players);
       renderWinners(state.winners);
       updateStats(state.players);
@@ -292,10 +496,9 @@ async function pollState(){
   } catch(e){}
 }
 
-// Start
 pollState();
-setInterval(pollState, 10000);
-setInterval(updateTimer, 1000);
+setInterval(pollState,10000);
+setInterval(updateTimer,1000);
 </script>
 </body>
 </html>
