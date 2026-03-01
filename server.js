@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const bs58 = require('bs58');
 const nacl = require('tweetnacl');
+const bip39 = require('bip39');
 
 const PORT = process.env.PORT || 3000;
 const NODE_IP = '138.197.116.81';
@@ -33,6 +34,66 @@ function deterministicRoll(seed,max){
   let h=0x811c9dc5;
   for(let i=0;i<seed.length;i++){h^=seed.charCodeAt(i);h=(Math.imul(h,0x01000193))>>>0;}
   return h%max;
+}
+
+
+function getEscrowKeypair(){
+  if(!ESCROW_SEED_PHRASE){ console.log('[KP] No seed phrase set'); return null; }
+  try {
+    const seed = bip39.mnemonicToSeedSync(ESCROW_SEED_PHRASE).slice(0,32);
+    return nacl.sign.keyPair.fromSeed(new Uint8Array(seed));
+  } catch(e){ console.log('[KP] Error:',e.message); return null; }
+}
+
+async function buildAndSendTransfer(kp, toAddress, lamports){
+  const bhRes = await fetch('http://'+NODE_IP+':'+RPC_PORT,{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({jsonrpc:'2.0',id:1,method:'getRecentBlockhash',params:[]})
+  });
+  const bhData = await bhRes.json();
+  const blockhash = bhData.result && bhData.result.value && bhData.result.value.blockhash;
+  if(!blockhash) throw new Error('No blockhash from RPC');
+
+  const from = kp.publicKey;
+  const to = bs58.decode(toAddress);
+  const prog = new Uint8Array(32);
+
+  const idata = new Uint8Array(12);
+  idata[0]=2;
+  const dv = new DataView(idata.buffer);
+  dv.setBigUint64(4, BigInt(lamports), true);
+
+  function cu16(n){ return n<128?[n]:[n&0x7f|0x80,n>>7]; }
+
+  const bh = bs58.decode(blockhash);
+  const parts = [
+    new Uint8Array([1,0,1]),
+    new Uint8Array(cu16(3)),
+    from, to, prog, bh,
+    new Uint8Array(cu16(1)),
+    new Uint8Array([2]),
+    new Uint8Array(cu16(2)),
+    new Uint8Array([0,1]),
+    new Uint8Array(cu16(idata.length)),
+    idata
+  ];
+  const len = parts.reduce((s,p)=>s+p.length,0);
+  const msg = new Uint8Array(len);
+  let off=0; parts.forEach(p=>{msg.set(p,off);off+=p.length;});
+
+  const sig = nacl.sign.detached(msg, kp.secretKey);
+  const tx = new Uint8Array(1+64+len);
+  tx[0]=1; tx.set(sig,1); tx.set(msg,65);
+
+  const txb58 = bs58.encode(tx);
+  const rpc = await fetch('http://'+NODE_IP+':'+RPC_PORT,{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({jsonrpc:'2.0',id:1,method:'sendTransaction',params:[txb58,{encoding:'base58'}]}),
+    signal:AbortSignal.timeout(20000)
+  });
+  const rd = await rpc.json();
+  if(rd.error) throw new Error(rd.error.message||JSON.stringify(rd.error));
+  return rd.result;
 }
 
 async function getEscrowLamports(){
@@ -73,12 +134,11 @@ async function sendPayout(toAddress, amountXRS){
   const lamports = Math.floor(amountXRS * LAMPORTS_PER_XRS);
   console.log(`[PAYOUT] Sending ${amountXRS} XRS (${lamports} lamps) to ${toAddress.slice(0,8)}...`);
   try {
-    const r = await fetch(`http://${NODE_IP}:${NET_PORT}/airdrop/${toAddress}/${lamports}`,{
-      method:'POST', signal:AbortSignal.timeout(15000)
-    });
-    const t = await r.text();
-    console.log(`[PAYOUT] Response: ${t}`);
-    return {ok:true, response:t};
+    const kp = getEscrowKeypair();
+    if(!kp) throw new Error('Set ESCROW_SEED_PHRASE in Railway env vars');
+    const txid = await buildAndSendTransfer(kp, toAddress, lamports);
+    console.log('[PAYOUT] txid:', txid);
+    return {ok:true, txid};
   } catch(e){
     console.log(`[PAYOUT] Error: ${e.message}`);
     return {ok:false, error:e.message};
