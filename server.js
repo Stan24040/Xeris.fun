@@ -35,57 +35,57 @@ function deterministicRoll(seed, max) {
   return h%max;
 }
 
-// ── Verify TX on Xeris node ──
-async function verifyTransaction(txSig, fromAddress, expectedLamports) {
-  // Method 1: Try getTransaction RPC
-  try {
-    const rpcUrl = `http://${NODE_IP}:${RPC_PORT}`;
-    // Try multiple RPC method names Xeris might use
-    for (const method of ['getTransaction','getConfirmedTransaction','eth_getTransactionByHash']) {
-      try {
-        const resp = await fetch(rpcUrl, {
-          method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({jsonrpc:'2.0',id:1,method,params:[txSig]}),
-          signal: AbortSignal.timeout(8000)
-        });
-        const data = await resp.json();
-        console.log(`[VERIFY] ${method}:`, JSON.stringify(data).slice(0,200));
-        if (data.result && data.result !== null) {
-          if (S.verifiedTx.has(txSig)) return {ok:false,error:'TX already used'};
-          S.verifiedTx.add(txSig);
-          return {ok:true, method};
-        }
-      } catch(e) { console.log(`[VERIFY] ${method} failed:`, e.message); }
-    }
-  } catch(e) {}
-
-  // Method 2: Check escrow balance increased
-  try {
-    const balUrl = `http://${NODE_IP}:${NET_PORT}/balance/${ESCROW_ADDRESS}`;
-    const resp = await fetch(balUrl, {signal: AbortSignal.timeout(8000)});
-    const text = await resp.text();
-    console.log(`[VERIFY] Escrow balance check: ${text}`);
-    // Parse balance - Xeris returns lamports or XRS amount
-    const bal = parseFloat(text.replace(/[^0-9.]/g,''));
-    if (!isNaN(bal)) {
-      const expectedXRS = expectedLamports / 1_000_000_000;
-      // Store last known balance to detect change
-      if (!S.escrowBalance) S.escrowBalance = 0;
-      const received = bal - S.escrowBalance;
-      console.log(`[VERIFY] Balance change: ${received}, expected: ${expectedXRS}`);
-      if (received >= expectedXRS * 0.95) {
-        S.escrowBalance = bal;
-        if (S.verifiedTx.has(txSig)) return {ok:false,error:'TX already used'};
-        S.verifiedTx.add(txSig);
-        return {ok:true, method:'balance-check'};
-      }
-    }
-  } catch(e) { console.log('[VERIFY] Balance check failed:', e.message); }
-
-  return {ok:false, error:'Transaction not found on chain'};
+// ── Verify TX: check escrow balance increased by expected amount ──
+async function getEscrowLamports() {
+  const resp = await fetch(`http://${NODE_IP}:${RPC_PORT}`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({jsonrpc:'2.0',id:1,method:'getAccountInfo',params:[ESCROW_ADDRESS,{encoding:'base64'}]}),
+    signal: AbortSignal.timeout(8000)
+  });
+  const data = await resp.json();
+  return parseInt(data?.result?.value?.lamports || 0);
 }
 
-async function verifyTransaction_UNUSED(txSig, fromAddress, expectedLamports) {
+async function verifyTransaction(txSig, fromAddress, expectedLamports) {
+  if (S.verifiedTx.has(txSig)) return {ok:false, error:'Transaction already used'};
+  try {
+    // Get current escrow balance
+    const currentLamports = await getEscrowLamports();
+    console.log(`[VERIFY] Escrow lamports: ${currentLamports}, prev: ${S.escrowBalance||0}, expected delta: ${expectedLamports}`);
+
+    // Initialize baseline on first run
+    if (!S.escrowBalance) { S.escrowBalance = currentLamports; }
+
+    const received = currentLamports - S.escrowBalance;
+    console.log(`[VERIFY] Balance delta: +${received} lamports, need: ${expectedLamports}`);
+
+    if (received >= Math.floor(expectedLamports * 0.99)) {
+      S.escrowBalance = currentLamports;
+      S.verifiedTx.add(txSig);
+      console.log(`[VERIFY] ✓ Payment confirmed! ${received} lamports received`);
+      return {ok:true, received};
+    }
+
+    // Also try getTransaction as fallback
+    const txResp = await fetch(`http://${NODE_IP}:${RPC_PORT}`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({jsonrpc:'2.0',id:1,method:'getTransaction',params:[txSig,{encoding:'jsonParsed'}]}),
+      signal: AbortSignal.timeout(8000)
+    });
+    const txData = await txResp.json();
+    if (txData.result && txData.result !== null) {
+      S.escrowBalance = currentLamports;
+      S.verifiedTx.add(txSig);
+      console.log(`[VERIFY] ✓ TX found on chain`);
+      return {ok:true};
+    }
+
+    return {ok:false, error:`Payment not detected yet. Escrow received ${received} lamports, need ${expectedLamports}. Wait a moment and try again.`};
+  } catch(e) {
+    console.log('[VERIFY] Error:', e.message);
+    return {ok:false, error:'Verification error: '+e.message};
+  }
+}
   try {
     const url = `http://${NODE_IP}:${RPC_PORT}`;
     const body = JSON.stringify({
